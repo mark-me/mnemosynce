@@ -18,10 +18,15 @@ WORKDIR /app
 
 # Install Python dependencies via uv (leverages layer cache)
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
 
 # Copy application source
 COPY src/ ./src/
+
+# Copy the README for easy access in the container (optional, but can be helpful for debugging or reference)
+COPY README.md ./
+
+RUN uv sync --frozen --no-dev
+
 
 # Bake the shell scripts into the image
 COPY backup.sh delete_old_backups.sh sync_backup_to_remote.sh ./
