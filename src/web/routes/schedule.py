@@ -74,7 +74,8 @@ def save():
             flash("Schedule saved but disabled.", "info")
     except Exception as exc:
         flash(f"Could not save schedule: {exc}", "danger")
-    return redirect(url_for("schedule.index"))
+    next_url = request.args.get("next") or url_for("schedule.index")
+    return redirect(next_url)
 
 
 @bp.route("/remove", methods=["POST"])
@@ -82,7 +83,8 @@ def save():
 def remove():
     remove_schedule(current_app._get_current_object())
     flash("Schedule removed.", "info")
-    return redirect(url_for("schedule.index"))
+    next_url = request.args.get("next") or url_for("schedule.index")
+    return redirect(next_url)
 
 
 @bp.route("/run-now", methods=["POST"])

@@ -153,7 +153,8 @@ def save():
     _config_path().write_text(raw, encoding="utf-8")
     session.pop(_SESSION_KEY, None)
     flash("Configuration saved successfully.", "success")
-    return redirect(url_for("config_editor.editor"))
+    next_url = request.args.get("next") or url_for("config_editor.editor")
+    return redirect(next_url)
 
 
 @bp.route("/reset", methods=["POST"])

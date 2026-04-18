@@ -108,7 +108,8 @@ def generate():
     key_path.chmod(0o600)
 
     flash(f"Key '{name}' generated successfully.", "success")
-    return redirect(url_for("ssh_keys.index"))
+    next_url = request.args.get("next") or url_for("ssh_keys.index")
+    return redirect(next_url)
 
 
 @bp.route("/delete", methods=["POST"])
@@ -131,4 +132,5 @@ def delete():
     else:
         flash(f"No files found for key '{name}'.", "warning")
 
-    return redirect(url_for("ssh_keys.index"))
+    next_url = request.args.get("next") or url_for("ssh_keys.index")
+    return redirect(next_url)
