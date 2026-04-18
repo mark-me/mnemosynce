@@ -4,7 +4,7 @@
 
 A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email — all managed through a clean web dashboard.
 
-![Mnemosynce Logo Concept](https://via.placeholder.com/800x200/1a2333/00d4cc?text=Mnemosynce)
+![Mnemosynce Logo Concept](docs/images/Mnemosyne%20Sync%20Logo.png)
 *Ancient memory meets modern sync*
 
 ## ✨ Features
