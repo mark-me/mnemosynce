@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% block title %}Login — Backup Server{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-5 col-lg-4">
+    <div class="card shadow-sm mt-4 mt-md-5">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <img src="{{ url_for('static', filename='images/backup.png') }}"
+               alt="Backup Server" width="48" height="48"
+               onerror="this.style.display='none'">
+          <h4 class="mt-2 mb-0">Backup Server</h4>
+        </div>
+        <form method="post">
+          <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username"
+                   name="username" autocomplete="username" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password"
+                   name="password" autocomplete="current-password" required>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-box-arrow-in-right me-1"></i>Log in
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+Hi there,
+
+I'm here to report on your back-up run. Each back-up task has three stages:
+* Back-up - Creating a snapshot back-up.
+* Retention policy - Removing obsolete previous back-ups according the the retention policy.
+* Sync remote - Syncing all back-ups to the remote location.
+{% for task in tasks %}
+Task: {{ task.name }}
+{% for step in task.steps %}
+    - {{ step.step }}
+        - Run OK?: {{ step.success }}
+        - Run duration: {{ step.time_elapsed }}
+{% endfor %}
+{% endfor %}
+Kind regards,
+Your back-up system

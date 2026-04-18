@@ -1,0 +1,140 @@
+{% extends "web/base.html" %}
+{% block title %}Home — Backup Server{% endblock %}
+{% block body_class %}page-home{% endblock %}
+
+{% block content %}
+{#
+  On desktop the cards live in the right column so they don't overlap
+  the satellite dish background image. On mobile the image is hidden
+  (via CSS) and the cards fill the full width.
+#}
+<div class="row">
+  <div class="col-12 col-lg-7 ms-lg-auto">
+
+    <div class="mb-4">
+      <h2 class="h3"><i class="bi bi-hdd-stack me-2"></i>Backup Server</h2>
+      <p class="text-body-secondary">
+        Manage your backup configuration, test connections, and schedule runs.
+      </p>
+    </div>
+
+    <div class="row g-3">
+
+      <!-- Configuration -->
+      <div class="col-6 col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center p-3 p-md-4">
+            <i class="bi bi-file-earmark-code display-6 text-primary mb-2 mb-md-3 d-block"></i>
+            <h6 class="card-title">Configuration</h6>
+            <p class="card-text text-body-secondary small d-none d-md-block">
+              Edit your backup YAML configuration.
+            </p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pb-3 text-center">
+            <a href="{{ url_for('config_editor.editor') }}"
+               class="btn btn-sm btn-primary w-100 w-md-auto">
+              <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test Connections -->
+      <div class="col-6 col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center p-3 p-md-4">
+            <i class="bi bi-wifi display-6 text-success mb-2 mb-md-3 d-block"></i>
+            <h6 class="card-title">Connections</h6>
+            <p class="card-text text-body-secondary small d-none d-md-block">
+              Verify SSH and email connectivity.
+            </p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pb-3 text-center">
+            <a href="{{ url_for('connections.index') }}"
+               class="btn btn-sm btn-success w-100 w-md-auto">
+              <i class="bi bi-wifi me-1"></i>Test
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- SSH Keys -->
+      <div class="col-6 col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center p-3 p-md-4">
+            <i class="bi bi-key display-6 text-warning mb-2 mb-md-3 d-block"></i>
+            <h6 class="card-title">SSH Keys</h6>
+            <p class="card-text text-body-secondary small d-none d-md-block">
+              Generate and manage SSH keys.
+            </p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pb-3 text-center">
+            <a href="{{ url_for('ssh_keys.index') }}"
+               class="btn btn-sm btn-warning w-100 w-md-auto">
+              <i class="bi bi-key me-1"></i>Manage
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule -->
+      <div class="col-6 col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center p-3 p-md-4">
+            <i class="bi bi-clock-history display-6 text-info mb-2 mb-md-3 d-block"></i>
+            <h6 class="card-title">Schedule</h6>
+            <p class="card-text text-body-secondary small d-none d-md-block">
+              Configure when backups run automatically.
+            </p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pb-3 text-center">
+            <a href="{{ url_for('schedule.index') }}"
+               class="btn btn-sm btn-info w-100 w-md-auto">
+              <i class="bi bi-clock-history me-1"></i>Schedule
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="col-6 col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center p-3 p-md-4">
+            <i class="bi bi-speedometer2 display-6 text-secondary mb-2 mb-md-3 d-block"></i>
+            <h6 class="card-title">Dashboard</h6>
+            <p class="card-text text-body-secondary small d-none d-md-block">
+              Review backup run history and statistics.
+            </p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pb-3 text-center">
+            <a href="{{ url_for('dashboard.index') }}"
+               class="btn btn-sm btn-secondary w-100 w-md-auto">
+              <i class="bi bi-speedometer2 me-1"></i>Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="col-6 col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center p-3 p-md-4">
+            <i class="bi bi-activity display-6 text-danger mb-2 mb-md-3 d-block"></i>
+            <h6 class="card-title">Progress</h6>
+            <p class="card-text text-body-secondary small d-none d-md-block">
+              Watch a backup run live as it happens.
+            </p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pb-3 text-center">
+            <a href="{{ url_for('progress.index') }}"
+               class="btn btn-sm btn-danger w-100 w-md-auto">
+              <i class="bi bi-activity me-1"></i>Progress
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

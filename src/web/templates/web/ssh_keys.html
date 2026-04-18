@@ -1,0 +1,120 @@
+{% extends "web/base.html" %}
+{% block title %}SSH Keys — Backup Server{% endblock %}
+
+{% block content %}
+<h2 class="h4 mb-1"><i class="bi bi-key me-2"></i>SSH Keys</h2>
+<p class="text-body-secondary small mb-4">
+  Generate ed25519 keypairs for passwordless SSH access to source and
+  destination machines. Private keys never leave this server.
+  Copy the public key to <code>~/.ssh/authorized_keys</code> on each remote host.
+</p>
+
+<!-- Generate new key -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-plus-circle"></i>Generate new key
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('ssh_keys.generate') }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-sm-4">
+          <label class="form-label small mb-1" for="key-name">
+            Key name <span class="text-danger">*</span>
+          </label>
+          <input type="text" class="form-control form-control-sm"
+                 id="key-name" name="name"
+                 placeholder="desktop_mark" required
+                 pattern="[A-Za-z0-9_\-]+"
+                 title="Letters, numbers, hyphens and underscores only">
+        </div>
+        <div class="col-12 col-sm-5">
+          <label class="form-label small mb-1" for="key-comment">
+            Comment <span class="text-body-secondary">(optional)</span>
+          </label>
+          <input type="text" class="form-control form-control-sm"
+                 id="key-comment" name="comment"
+                 placeholder="backup-server/desktop_mark">
+        </div>
+        <div class="col-12 col-sm-3">
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-key me-1"></i>Generate
+          </button>
+        </div>
+      </div>
+      <div class="form-text mt-1">
+        Keys are saved to <code>{{ config.SSH_KEY_DIR }}</code>.
+        Name must contain only letters, numbers, hyphens and underscores.
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Existing keys -->
+{% if keys %}
+  {% for key in keys %}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <span class="fw-semibold">
+        <i class="bi bi-key-fill text-warning me-2"></i>{{ key.name }}
+      </span>
+      <form method="post" action="{{ url_for('ssh_keys.delete') }}"
+            onsubmit="return confirm('Delete key \'{{ key.name }}\'? This cannot be undone.')">
+        <input type="hidden" name="name" value="{{ key.name }}">
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-trash me-1"></i>Delete
+        </button>
+      </form>
+    </div>
+    <div class="card-body">
+      <p class="small text-body-secondary mb-2">
+        Public key — copy this to <code>~/.ssh/authorized_keys</code>
+        on the remote host:
+      </p>
+      <div class="input-group input-group-sm">
+        <input type="text" class="form-control font-monospace small"
+               id="pubkey-{{ loop.index }}"
+               value="{{ key.public_key }}" readonly>
+        <button class="btn btn-outline-secondary" type="button"
+                onclick="copyKey('pubkey-{{ loop.index }}', this)"
+                title="Copy to clipboard">
+          <i class="bi bi-clipboard"></i>
+        </button>
+      </div>
+      {% if not key.has_private %}
+      <div class="alert alert-warning py-1 px-2 mt-2 small mb-0">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Private key file not found — this key may not work.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card shadow-sm">
+    <div class="card-body text-center text-body-secondary py-5">
+      <i class="bi bi-key display-4 mb-3 d-block opacity-25"></i>
+      No SSH keys yet. Generate one above.
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function copyKey(inputId, btn) {
+    const input = document.getElementById(inputId);
+    navigator.clipboard.writeText(input.value).then(() => {
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-check"></i>';
+      btn.classList.replace("btn-outline-secondary", "btn-success");
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.classList.replace("btn-success", "btn-outline-secondary");
+      }, 1800);
+    }).catch(() => {
+      input.select();
+      document.execCommand("copy");
+    });
+  }
+</script>
+{% endblock %}

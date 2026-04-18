@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+    <body style="font-family: sans-serif;">
+        <p>Hi there,</p>
+        <p>I'm here to report on your back-up run.</p>
+
+        <table width="80%" border="1" cellpadding="5" cellspacing="0" align="center" style="border-collapse: collapse;">
+            <tr>
+                <th style="background-color: #7B68EE; color: white;">Task</th>
+                <th style="background-color: #7B68EE; color: white;">Task duration</th>
+                <th style="background-color: #7B68EE; color: white;">Back-up</th>
+                <th style="background-color: #7B68EE; color: white;">Retention policy</th>
+                <th style="background-color: #7B68EE; color: white;">Sync remote</th>
+                <th style="background-color: #7B68EE; color: white;">Days since last success</th>
+            </tr>
+            {% for task in tasks %}
+            <tr>
+                <td style="background-color: #E6E6FA;">{{ task.name }}</td>
+                <td align="center">{{ task.time_task_elapsed }}</td>
+                {% for step in task.steps %}
+                    {% if step.success %}
+                        <td align="center" style="background-color: #E6FFE6; color: #228B22;">
+                            &#10004;<br>{{ step.time_elapsed }}
+                        </td>
+                    {% else %}
+                        <td align="center" style="background-color: #FFE6E6; color: #C70039;">
+                            &#10008;<br>{{ step.time_elapsed }}
+                        </td>
+                    {% endif %}
+                {% endfor %}
+                {% if task.success %}
+                    <td align="center" style="color: #228B22;">{{ task.days_since_last_success }}</td>
+                {% else %}
+                    {% if task.days_since_last_success <= 2 %}
+                        <td align="center" style="color: #228B22;">{{ task.days_since_last_success }}</td>
+                    {% elif task.days_since_last_success <= 3 %}
+                        <td align="center" style="color: #FF8C00;">{{ task.days_since_last_success }}</td>
+                    {% else %}
+                        <td align="center" style="color: #C70039;">{{ task.days_since_last_success }}</td>
+                    {% endif %}
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+
+        <h3>What does this table mean?</h3>
+        <p>
+            This table shows the status of the back-up task and the status of the underlying three steps, along with the time each step took to complete.
+            The last column shows the days that have passed since the last successful run.
+        </p>
+        <ol>
+            <li><b>Back-up</b> - Creates a local snapshot back-up.</li>
+            <li><b>Retention policy</b> - Removes obsolete previous back-ups according to the retention policy.</li>
+            <li><b>Sync remote</b> - Syncs all back-ups to the remote location.</li>
+        </ol>
+
+        <p>Kind regards,<br>Your back-up system</p>
+    </body>
+</html>

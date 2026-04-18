@@ -1,0 +1,129 @@
+{% extends "web/base.html" %}
+{% block title %}Run History — Backup Server{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h2 class="h4 mb-0">
+    <i class="bi bi-clock-history me-2"></i>Run History
+    {% if task_name %}
+      <span class="badge bg-secondary fw-normal ms-1">{{ task_name }}</span>
+    {% endif %}
+  </h2>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm btn-outline-secondary ms-auto">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+
+<!-- Task filter -->
+{% if tasks %}
+<div class="d-flex flex-wrap gap-1 mb-3">
+  <a href="{{ url_for('dashboard.history') }}"
+     class="btn btn-sm {% if not task_name %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+    All tasks
+  </a>
+  {% for t in tasks %}
+  <a href="{{ url_for('dashboard.history', task_name=t) }}"
+     class="btn btn-sm {% if task_name == t %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+    {{ t }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if runs %}
+<!-- Run list — each run is a collapsible accordion item -->
+<div class="accordion" id="run-accordion">
+  {% for run in runs %}
+  {% set run_id = "run-" ~ loop.index %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed py-2 px-3" type="button"
+              data-bs-toggle="collapse" data-bs-target="#{{ run_id }}">
+        <div class="d-flex align-items-center gap-3 w-100 me-3">
+          {% if run.success %}
+            <i class="bi bi-check-circle-fill text-success flex-shrink-0"></i>
+          {% else %}
+            <i class="bi bi-x-circle-fill text-danger flex-shrink-0"></i>
+          {% endif %}
+          <span class="fw-semibold small flex-shrink-0">{{ run.task }}</span>
+          <span class="text-body-secondary small d-none d-sm-inline">{{ run.started }}</span>
+          <span class="ms-auto text-body-secondary small flex-shrink-0">{{ run.elapsed }}</span>
+        </div>
+      </button>
+    </h2>
+    <div id="{{ run_id }}" class="accordion-collapse collapse">
+      <div class="accordion-body p-0">
+        <table class="table table-sm mb-0 small">
+          <thead class="table-secondary">
+            <tr>
+              <th>Step</th>
+              <th>Result</th>
+              <th class="d-none d-sm-table-cell">Started</th>
+              <th>Elapsed</th>
+              <th class="d-none d-md-table-cell">From</th>
+              <th class="d-none d-md-table-cell">To</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for step in run.steps %}
+            <tr>
+              <td class="fw-semibold">{{ step.step }}</td>
+              <td>
+                {% if step.success %}
+                  <span class="badge bg-success">OK</span>
+                {% else %}
+                  <span class="badge bg-danger">Failed</span>
+                {% endif %}
+              </td>
+              <td class="text-body-secondary d-none d-sm-table-cell">{{ step.started }}</td>
+              <td class="font-monospace">{{ step.elapsed }}</td>
+              <td class="text-body-secondary text-truncate d-none d-md-table-cell"
+                  style="max-width:200px" title="{{ step.dir_from }}">
+                {{ step.dir_from }}
+              </td>
+              <td class="text-body-secondary text-truncate d-none d-md-table-cell"
+                  style="max-width:200px" title="{{ step.dir_to }}">
+                {{ step.dir_to }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+<div class="d-flex justify-content-between align-items-center mt-3">
+  {% if page > 1 %}
+  <a href="{{ url_for('dashboard.history', task_name=task_name, page=page-1) }}"
+     class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-chevron-left me-1"></i>Newer
+  </a>
+  {% else %}
+  <span></span>
+  {% endif %}
+  <span class="small text-body-secondary">Page {{ page }}</span>
+  {% if has_more %}
+  <a href="{{ url_for('dashboard.history', task_name=task_name, page=page+1) }}"
+     class="btn btn-sm btn-outline-secondary">
+    Older<i class="bi bi-chevron-right ms-1"></i>
+  </a>
+  {% else %}
+  <span></span>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="card shadow-sm">
+  <div class="card-body text-center text-body-secondary py-5">
+    <i class="bi bi-database display-4 mb-3 d-block opacity-25"></i>
+    No runs recorded
+    {% if task_name %}for task <strong>{{ task_name }}</strong>{% endif %} yet.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

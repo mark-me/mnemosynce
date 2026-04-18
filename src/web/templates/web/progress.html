@@ -1,0 +1,240 @@
+{% extends "web/base.html" %}
+{% block title %}Progress — Backup Server{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Terminal output area */
+  #log-output {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    background: #0d1117;
+    color: #c9d1d9;
+    border-radius: 0 0 var(--bs-border-radius) var(--bs-border-radius);
+    padding: 0.75rem 1rem;
+    height: clamp(300px, 50vh, 520px);
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  [data-bs-theme="light"] #log-output {
+    background: #1e1e1e;
+  }
+  .log-line-error   { color: #f85149; }
+  .log-line-warning { color: #d29922; }
+  .log-line-info    { color: #c9d1d9; }
+  .log-line-debug   { color: #6e7681; }
+
+  /* Terminal toolbar */
+  .terminal-toolbar {
+    background: #161b22;
+    border: 1px solid var(--bs-border-color);
+    border-bottom: none;
+    border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+    padding: 0.35rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  [data-bs-theme="light"] .terminal-toolbar { background: #24292f; }
+
+  /* Step badge states */
+  .step-badge { min-width: 4.5rem; transition: background-color 0.3s ease; }
+
+  /* Pulse animation for the running indicator */
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .pulse { animation: pulse 1.5s ease-in-out infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h2 class="h4 mb-0"><i class="bi bi-activity me-2"></i>Progress</h2>
+  <!-- Live status indicator -->
+  <span id="status-badge" class="badge
+    {% if snap.active %}bg-primary pulse
+    {% elif snap.success is none %}bg-secondary
+    {% elif snap.success %}bg-success
+    {% else %}bg-danger{% endif %}">
+    {% if snap.active %}Running
+    {% elif snap.success is none %}No run yet
+    {% elif snap.success %}Completed
+    {% else %}Failed{% endif %}
+  </span>
+  <span id="task-label" class="text-body-secondary small">
+    {% if snap.task_name %}{{ snap.task_name }}{% endif %}
+  </span>
+  <div class="ms-auto d-flex gap-2">
+    <span id="timing-label" class="text-body-secondary small align-self-center">
+      {% if snap.started %}Started {{ snap.started }}{% endif %}
+    </span>
+    <!-- Run now button — mirrors the schedule page -->
+    <form method="post" action="{{ url_for('schedule.run_now') }}">
+      <button type="submit" class="btn btn-sm btn-success" id="run-btn"
+              {% if snap.active %}disabled{% endif %}>
+        <i class="bi bi-play me-1"></i>Run now
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Step status badges -->
+{% if snap.steps %}
+<div class="d-flex gap-2 mb-3 flex-wrap" id="step-badges">
+  {% for step in snap.steps %}
+  {% set cls = {
+      "pending": "bg-secondary",
+      "running": "bg-primary pulse",
+      "success": "bg-success",
+      "failed":  "bg-danger",
+    }[step.state] %}
+  <span class="badge step-badge {{ cls }}" id="step-{{ step.name }}">
+    <i class="bi bi-{% if step.state == 'success' %}check{% elif step.state == 'failed' %}x{% elif step.state == 'running' %}arrow-repeat{% else %}circle{% endif %} me-1"></i>
+    {{ step.name }}
+  </span>
+  {% endfor %}
+</div>
+{% else %}
+<div class="d-flex gap-2 mb-3 flex-wrap" id="step-badges">
+  {% for name in ["backup", "retention", "sync"] %}
+  <span class="badge step-badge bg-secondary" id="step-{{ name }}">
+    <i class="bi bi-circle me-1"></i>{{ name }}
+  </span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Terminal output -->
+<div class="card shadow-sm">
+  <div class="terminal-toolbar">
+    <span class="text-secondary small"><i class="bi bi-terminal me-1"></i>log output</span>
+    <span class="ms-auto">
+      <button class="btn btn-sm btn-outline-secondary btn-sm py-0 px-2"
+              id="autoscroll-btn" onclick="toggleAutoscroll()" title="Toggle autoscroll">
+        <i class="bi bi-arrow-bar-down" id="autoscroll-icon"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1"
+              onclick="clearLog()" title="Clear display">
+        <i class="bi bi-trash"></i>
+      </button>
+    </span>
+  </div>
+  <div id="log-output"></div>
+</div>
+
+<div class="d-flex justify-content-between mt-2">
+  <span class="small text-body-secondary" id="line-count">0 lines</span>
+  <a href="{{ url_for('dashboard.history') }}" class="small text-body-secondary">
+    <i class="bi bi-clock-history me-1"></i>View run history
+  </a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // ---- State ---------------------------------------------------------------
+  let autoscroll  = true;
+  let lineCount   = 0;
+  let eventSource = null;
+
+  const logEl       = document.getElementById("log-output");
+  const countEl     = document.getElementById("line-count");
+  const statusBadge = document.getElementById("status-badge");
+  const taskLabel   = document.getElementById("task-label");
+  const timingLabel = document.getElementById("timing-label");
+  const runBtn      = document.getElementById("run-btn");
+
+  // ---- Helpers -------------------------------------------------------------
+  function levelClass(line) {
+    const low = line.toLowerCase();
+    if (low.includes("error"))   return "log-line-error";
+    if (low.includes("warning")) return "log-line-warning";
+    if (low.includes("debug"))   return "log-line-debug";
+    return "log-line-info";
+  }
+
+  function appendLine(text) {
+    const div = document.createElement("div");
+    div.className = levelClass(text);
+    div.textContent = text;
+    logEl.appendChild(div);
+    lineCount++;
+    countEl.textContent = `${lineCount} line${lineCount === 1 ? "" : "s"}`;
+    if (autoscroll) logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function applyState(snap) {
+    // Status badge
+    const active  = snap.active;
+    const success = snap.success;
+    statusBadge.className = "badge " + (
+      active          ? "bg-primary pulse" :
+      success === null ? "bg-secondary"    :
+      success          ? "bg-success"      : "bg-danger"
+    );
+    statusBadge.textContent = (
+      active          ? "Running"    :
+      success === null ? "No run yet" :
+      success          ? "Completed"  : "Failed"
+    );
+
+    // Task label and timing
+    if (snap.task_name) taskLabel.textContent = snap.task_name;
+    if (snap.started)   timingLabel.textContent = `Started ${snap.started}`;
+    if (snap.ended)     timingLabel.textContent += ` · Ended ${snap.ended}`;
+
+    // Run button
+    runBtn.disabled = active;
+
+    // Step badges
+    const stateMap = { pending:"secondary", running:"primary pulse", success:"success", failed:"danger" };
+    const iconMap  = { pending:"circle", running:"arrow-repeat", success:"check", failed:"x" };
+    (snap.steps || []).forEach(step => {
+      const el = document.getElementById("step-" + step.name);
+      if (!el) return;
+      const cls   = stateMap[step.state] || "secondary";
+      const icon  = iconMap[step.state]  || "circle";
+      el.className = `badge step-badge bg-${cls}${step.state === "running" ? " pulse" : ""}`;
+      el.innerHTML = `<i class="bi bi-${icon} me-1"></i>${step.name}`;
+    });
+  }
+
+  function toggleAutoscroll() {
+    autoscroll = !autoscroll;
+    document.getElementById("autoscroll-icon").className =
+      autoscroll ? "bi bi-arrow-bar-down" : "bi bi-pause";
+  }
+
+  function clearLog() {
+    logEl.innerHTML = "";
+    lineCount = 0;
+    countEl.textContent = "0 lines";
+  }
+
+  // ---- SSE -----------------------------------------------------------------
+  function connect() {
+    if (eventSource) eventSource.close();
+    eventSource = new EventSource("{{ url_for('progress.stream') }}");
+
+    eventSource.addEventListener("line", e => appendLine(e.data));
+
+    eventSource.addEventListener("state", e => {
+      try { applyState(JSON.parse(e.data)); } catch (_) {}
+    });
+
+    eventSource.addEventListener("done", () => {
+      eventSource.close();
+      eventSource = null;
+    });
+
+    eventSource.onerror = () => {
+      // Brief back-off then reconnect so the page stays live
+      setTimeout(connect, 3000);
+    };
+  }
+
+  // Apply the server-rendered initial state immediately, then open the stream
+  applyState({{ snap | tojson }});
+  connect();
+</script>
+{% endblock %}

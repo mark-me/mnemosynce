@@ -1,0 +1,180 @@
+{% extends "web/base.html" %}
+{% block title %}Schedule — Backup Server{% endblock %}
+
+{% block content %}
+<h2 class="h4 mb-1"><i class="bi bi-clock-history me-2"></i>Schedule</h2>
+<p class="text-body-secondary small mb-4">
+  Configure an automatic backup schedule using a standard cron expression.
+  The scheduler runs in UTC.
+</p>
+
+<div class="row g-4">
+
+  <!-- Schedule form -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-calendar-event"></i>Cron schedule
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('schedule.save') }}">
+          <div class="mb-3">
+            <label class="form-label small mb-1" for="cron-input">
+              Cron expression
+              <a href="https://crontab.guru" target="_blank" rel="noopener"
+                 class="ms-1 text-body-secondary small">
+                <i class="bi bi-question-circle"></i> help
+              </a>
+            </label>
+            <input type="text" class="form-control form-control-sm font-monospace"
+                   id="cron-input" name="cron"
+                   value="{{ cfg.cron if cfg else '0 2 * * *' }}"
+                   placeholder="0 2 * * *" autocomplete="off"
+                   oninput="updateDescription(this.value)">
+            <div class="form-text" id="cron-description">Every day at 02:00 UTC</div>
+          </div>
+          <div class="mb-3">
+            <div class="small text-body-secondary mb-1">Quick presets</div>
+            <div class="d-flex flex-wrap gap-1">
+              {% for expr, label in [("0 2 * * *","Daily 02:00"),("0 3 * * 0","Weekly Sun 03:00"),("0 4 1 * *","Monthly 1st 04:00"),("0 */6 * * *","Every 6 h")] %}
+              <button type="button" class="btn btn-outline-secondary btn-sm"
+                      onclick="setPreset('{{ expr }}')">{{ label }}</button>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="enabled" name="enabled"
+                   {% if cfg and cfg.enabled %}checked{% endif %}>
+            <label class="form-check-label small" for="enabled">
+              Enable automatic scheduling
+            </label>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-floppy me-1"></i>Save schedule
+            </button>
+            {% if cfg %}
+            <form method="post" action="{{ url_for('schedule.remove') }}"
+                  onsubmit="return confirm('Remove the schedule entirely?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash me-1"></i>Remove
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status + run now -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-info-circle"></i>Status
+      </div>
+      <div class="card-body">
+        {% if status.scheduled and status.enabled %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-success">Active</span>
+            <code class="small">{{ status.cron }}</code>
+          </div>
+          <div class="small text-body-secondary">
+            Next run: <strong id="next-run">{{ status.next_run_display }}</strong>
+          </div>
+        {% elif status.scheduled and not status.enabled %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-secondary">Disabled</span>
+            <code class="small">{{ status.cron }}</code>
+          </div>
+          <div class="small text-body-secondary">Schedule saved but not active.</div>
+        {% else %}
+          <div class="text-body-secondary small">
+            <i class="bi bi-calendar-x me-1"></i>No schedule configured yet.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-play-circle"></i>Run backup now
+      </div>
+      <div class="card-body">
+        <p class="small text-body-secondary mb-3">
+          Trigger a backup immediately, outside the regular schedule.
+          Runs in the background — you can leave this page.
+        </p>
+        <div id="run-status" class="mb-2" style="display:none">
+          <div class="alert alert-info py-2 small mb-0">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Backup is running…
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('schedule.run_now') }}" id="run-now-form">
+          <button type="submit" class="btn btn-success btn-sm w-100" id="run-now-btn">
+            <i class="bi bi-play me-1"></i>Run now
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cron reference -->
+<div class="card shadow-sm mt-4">
+  <div class="card-header small"><i class="bi bi-table me-1"></i>Cron reference</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered mb-0 small">
+        <thead class="table-secondary">
+          <tr><th>Field</th><th>Values</th><th>Special chars</th></tr>
+        </thead>
+        <tbody>
+          {% for field, vals in [("Minute","0–59"),("Hour","0–23"),("Day of month","1–31"),("Month","1–12"),("Day of week","0–6 (Sun=0)")] %}
+          <tr>
+            <td>{{ field }}</td><td>{{ vals }}</td>
+            <td>{% if loop.first %}<code>*</code> any &nbsp;<code>,</code> list &nbsp;<code>-</code> range &nbsp;<code>/</code> step{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const descriptions = {
+    "0 2 * * *":   "Every day at 02:00 UTC",
+    "0 3 * * 0":   "Every Sunday at 03:00 UTC",
+    "0 4 1 * *":   "1st of every month at 04:00 UTC",
+    "0 */6 * * *": "Every 6 hours",
+  };
+  function updateDescription(val) {
+    document.getElementById("cron-description").textContent =
+      descriptions[val.trim()] || "Custom schedule";
+  }
+  function setPreset(expr) {
+    document.getElementById("cron-input").value = expr;
+    updateDescription(expr);
+  }
+  updateDescription(document.getElementById("cron-input").value);
+
+  let polling = {{ 'true' if status.get('manual_running') else 'false' }};
+  function pollStatus() {
+    fetch("{{ url_for('schedule.status') }}").then(r => r.json()).then(data => {
+      const runStatus = document.getElementById("run-status");
+      const runBtn    = document.getElementById("run-now-btn");
+      const nextRun   = document.getElementById("next-run");
+      runStatus.style.display = data.manual_running ? "block" : "none";
+      runBtn.disabled = data.manual_running;
+      polling = data.manual_running;
+      if (nextRun && data.next_run_display) nextRun.textContent = data.next_run_display;
+    }).catch(() => {});
+  }
+  setInterval(() => { if (polling) pollStatus(); }, 5000);
+  if (polling) pollStatus();
+</script>
+{% endblock %}

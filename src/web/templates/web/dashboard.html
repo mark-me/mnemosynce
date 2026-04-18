@@ -1,0 +1,153 @@
+{% extends "web/base.html" %}
+{% block title %}Dashboard — Backup Server{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+  <h2 class="h4 mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h2>
+  <a href="{{ url_for('dashboard.history') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-clock-history me-1"></i>Full history
+  </a>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-lg-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body py-3">
+        <div class="display-6 fw-bold">{{ summary.total_runs }}</div>
+        <div class="small text-body-secondary mt-1">Total runs</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card shadow-sm text-center h-100 border-success">
+      <div class="card-body py-3">
+        <div class="display-6 fw-bold text-success">{{ summary.successful_runs }}</div>
+        <div class="small text-body-secondary mt-1">Successful</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card shadow-sm text-center h-100 {% if summary.failed_runs > 0 %}border-danger{% endif %}">
+      <div class="card-body py-3">
+        <div class="display-6 fw-bold {% if summary.failed_runs > 0 %}text-danger{% endif %}">
+          {{ summary.failed_runs }}
+        </div>
+        <div class="small text-body-secondary mt-1">Failed</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body py-3">
+        <div class="small fw-semibold">{{ summary.last_run_ts }}</div>
+        <div class="small text-body-secondary mt-1">Last run</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Per-task stats -->
+{% if task_stats %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header small fw-semibold">
+    <i class="bi bi-list-check me-1"></i>Tasks
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead class="table-secondary">
+        <tr>
+          <th>Task</th>
+          <th class="text-end">Runs</th>
+          <th class="text-end d-none d-md-table-cell">Successful</th>
+          <th class="text-end d-none d-md-table-cell">Failed</th>
+          <th class="d-none d-sm-table-cell">Success rate</th>
+          <th class="d-none d-lg-table-cell">Last run</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in task_stats %}
+        <tr>
+          <td class="fw-semibold">{{ t.task }}</td>
+          <td class="text-end">{{ t.total_runs }}</td>
+          <td class="text-end text-success d-none d-md-table-cell">{{ t.successful }}</td>
+          <td class="text-end {% if t.failed > 0 %}text-danger{% endif %} d-none d-md-table-cell">
+            {{ t.failed }}
+          </td>
+          <td class="d-none d-sm-table-cell" style="min-width:120px">
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px">
+                <div class="progress-bar {% if t.success_rate == 100 %}bg-success{% elif t.success_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                     style="width:{{ t.success_rate }}%"></div>
+              </div>
+              <span class="small text-body-secondary" style="min-width:2.5rem">
+                {{ t.success_rate }}%
+              </span>
+            </div>
+          </td>
+          <td class="small text-body-secondary d-none d-lg-table-cell">{{ t.last_run_ts }}</td>
+          <td>
+            <a href="{{ url_for('dashboard.history', task_name=t.task) }}"
+               class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-clock-history"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent runs -->
+{% if recent %}
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center justify-content-between small fw-semibold">
+    <span><i class="bi bi-activity me-1"></i>Recent runs</span>
+    <a href="{{ url_for('dashboard.history') }}" class="text-body-secondary small">
+      See all <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+  <div class="list-group list-group-flush">
+    {% for run in recent %}
+    {% set icon = "bi-check-circle-fill text-success" if run.success else "bi-x-circle-fill text-danger" %}
+    <div class="list-group-item px-3 py-2">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi {{ icon }} flex-shrink-0"></i>
+        <div class="flex-grow-1 min-width-0">
+          <div class="fw-semibold small text-truncate">{{ run.task }}</div>
+          <div class="text-body-secondary" style="font-size:0.75rem">
+            {{ run.started }} &nbsp;·&nbsp; {{ run.elapsed }}
+          </div>
+        </div>
+        <!-- Step pills -->
+        <div class="d-flex gap-1 flex-shrink-0">
+          {% for step in run.steps %}
+          <span class="badge {% if step.success %}bg-success{% else %}bg-danger{% endif %}"
+                title="{{ step.step }}: {{ 'ok' if step.success else 'failed' }}">
+            {{ step.step[:3] }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="card shadow-sm">
+  <div class="card-body text-center text-body-secondary py-5">
+    <i class="bi bi-database display-4 mb-3 d-block opacity-25"></i>
+    No backup runs recorded yet.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

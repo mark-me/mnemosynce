@@ -1,0 +1,62 @@
+[project]
+name = "backup-server"
+version = "0.1.0"
+requires-python = ">=3.12.0"
+authors = [
+    { name = "Mark Zwart", email = "mark.zwart@pobox.com" },
+]
+readme = "README.md"
+
+dependencies = [
+    "dotenv==0.9.9",
+    "jinja2>=3.1.5",
+    "MarkupSafe>=3.0.2",
+    "numpy==2.2.2",
+    "pandas==2.2.3",
+    "python-dateutil==2.9.0.post0",
+    "python-dotenv>=1.1.0",
+    "python-json-logger>=3.2.1",
+    "pytz==2024.2",
+    "PyYAML>=6.0.2",
+    "six==1.17.0",
+    "tzdata==2024.2",
+    "flask>=3.1.0",
+    "gunicorn>=23.0.0",
+    "APScheduler>=3.10.4",
+]
+
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+backup_server = ["templates/*"]
+web = ["templates/web/*"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov",
+    "mypy",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "functional: runs real shell scripts, requires project to be set up correctly",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
