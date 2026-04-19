@@ -28,9 +28,11 @@ COPY README.md ./
 RUN uv sync --frozen --no-dev
 
 
-# Bake the shell scripts into the image
-COPY backup.sh delete_old_backups.sh sync_backup_to_remote.sh ./
-RUN chmod +x backup.sh delete_old_backups.sh sync_backup_to_remote.sh
+# Make the shell scripts (now part of the backup_server package) executable.
+# They are already copied in via COPY src/ above.
+RUN chmod +x src/backup_server/backup.sh \
+             src/backup_server/delete_old_backups.sh \
+             src/backup_server/sync_backup_to_remote.sh
 
 # /data is the single mount point for all persistent state:
 #   backup_config.yml, log.db, log.json, ssh keys

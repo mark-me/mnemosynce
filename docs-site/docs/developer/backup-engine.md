@@ -112,7 +112,7 @@ A thin SQLite wrapper using a single `task_run` table. Each row represents one s
 
 ## Shell scripts
 
-The three bash scripts are baked into the Docker image and expected to exist in the working directory at runtime.
+The three bash scripts live in `src/backup_server/` alongside the Python modules and are resolved via the module-level `_SCRIPTS_DIR = Path(__file__).parent` constant in `backup_task.py`. They are included in the installed package via the `*.sh` glob in `pyproject.toml`'s `[tool.setuptools.package-data]` section.
 
 | Script | Arguments | Purpose |
 |--------|-----------|---------|

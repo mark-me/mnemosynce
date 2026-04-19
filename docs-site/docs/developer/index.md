@@ -18,6 +18,9 @@ mnemosynce/
 │   │   ├── email_report.py     # Composes and sends the HTML status email
 │   │   ├── logging_config.py   # JSON structured logging setup
 │   │   ├── main.py             # CLI entry point
+│   │   ├── backup.sh           # rsync snapshot script
+│   │   ├── delete_old_backups.sh     # Retention policy script
+│   │   ├── sync_backup_to_remote.sh  # Remote sync script
 │   │   └── templates/          # Jinja2 email templates
 │   ├── config/
 │   │   └── config.py           # Flask config classes (Dev / Test / Production)

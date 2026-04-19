@@ -37,7 +37,7 @@ where = ["src"]
 "" = "src"
 
 [tool.setuptools.package-data]
-backup_server = ["templates/*"]
+backup_server = ["templates/*", "*.sh"]
 web = ["templates/web/*"]
 
 [project.optional-dependencies]

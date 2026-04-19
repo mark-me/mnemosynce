@@ -7,6 +7,10 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Directory containing the shell scripts — always the same package directory
+# as this module, regardless of where the process was launched from.
+_SCRIPTS_DIR = Path(__file__).parent
+
 # Rsync stderr lines that are warnings, not fatal errors
 _RSYNC_IGNORED_ERRORS = (
     "Permission denied (13)",
@@ -35,14 +39,17 @@ class BackupTask:
         """Construct a BackupTask from a task definition and backup locations.
 
         This stores the source and destination directories, initialises the
-        status structure, configures the working directory and command
-        runner, and writes out any configured exclude patterns.
+        status structure, configures the command runner, and writes out any
+        configured exclude patterns.
 
         Args:
             task (dict): The task configuration dictionary containing at least ``name`` and ``dir_source``.
             dir_local (str): Local directory where backups for this task are stored.
             dir_remote (str): Remote directory (or host:dir spec) where backups are synced.
-            work_dir (Path | None): Optional working directory containing helper scripts; defaults to CWD.
+            work_dir (Path | None): Directory used for the excludes.lst file and step log files.
+                Defaults to the current working directory.  Shell scripts are always
+                resolved from the package directory (``_SCRIPTS_DIR``) regardless of
+                this value.
             runner (Runner): Callable used to execute shell commands, mainly for testing injection.
         """
         self._name = task["name"]
@@ -50,6 +57,7 @@ class BackupTask:
         self._dir_local = dir_local
         self._dir_remote = dir_remote
         self._status = {"name": self._name, "steps": []}
+        self._scripts_dir = _SCRIPTS_DIR
         self._work_dir = work_dir or Path.cwd()
         self._runner = runner
         self._write_excludes(task.get("excludes", []))
@@ -107,7 +115,7 @@ class BackupTask:
         Returns:
             bool: True if the backup script completed successfully, otherwise False.
         """
-        script = self._work_dir / "backup.sh"
+        script = self._scripts_dir / "backup.sh"
         cmd = [str(script), self._name, self._dir_local, self._dir_source]
         return self._run_step(
             step_name="backup",
@@ -127,7 +135,7 @@ class BackupTask:
         Returns:
             bool: True if the retention script completed successfully, otherwise False.
         """
-        script = self._work_dir / "delete_old_backups.sh"
+        script = self._scripts_dir / "delete_old_backups.sh"
         cmd = [str(script), self._name, self._dir_local]
         return self._run_step(
             step_name="retention",
@@ -145,7 +153,7 @@ class BackupTask:
         Returns:
             bool: True if the sync script completed successfully, otherwise False.
         """
-        script = self._work_dir / "sync_backup_to_remote.sh"
+        script = self._scripts_dir / "sync_backup_to_remote.sh"
         cmd = [str(script), self._name, self._dir_local, self._dir_remote]
         return self._run_step(
             step_name="sync",

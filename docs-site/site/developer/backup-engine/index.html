@@ -1362,7 +1362,7 @@
 <li>Fills in any steps that were never reached (so templates always see all three steps).</li>
 </ul>
 <h2 id="shell-scripts">Shell scripts<a class="headerlink" href="#shell-scripts" title="Permanent link">&para;</a></h2>
-<p>The three bash scripts are baked into the Docker image and expected to exist in the working directory at runtime.</p>
+<p>The three bash scripts live in <code>src/backup_server/</code> alongside the Python modules and are resolved via the module-level <code>_SCRIPTS_DIR = Path(__file__).parent</code> constant in <code>backup_task.py</code>. They are included in the installed package via the <code>*.sh</code> glob in <code>pyproject.toml</code>'s <code>[tool.setuptools.package-data]</code> section.</p>
 <table>
 <thead>
 <tr>

@@ -140,7 +140,10 @@ mnemosynce/
 │   │   ├── config_file.py     # Reads and validates backup_config.yml
 │   │   ├── database.py        # SQLite run log
 │   │   ├── email_report.py    # Composes and sends the HTML status email
-│   │   └── main.py            # CLI entry point
+│   │   ├── main.py            # CLI entry point
+│   │   ├── backup.sh          # rsync snapshot script
+│   │   ├── delete_old_backups.sh    # Retention policy script
+│   │   └── sync_backup_to_remote.sh # Remote sync script
 │   ├── config/
 │   │   └── config.py          # Flask config classes (Dev / Test / Production)
 │   └── web/
@@ -148,9 +151,6 @@ mnemosynce/
 │       ├── scheduler.py       # APScheduler singleton + live log bridging
 │       ├── setup_state.py     # Session-backed setup readiness checks
 │       └── routes/            # One blueprint per feature area
-├── backup.sh                  # rsync snapshot script
-├── delete_old_backups.sh      # Retention policy script
-├── sync_backup_to_remote.sh   # Remote sync script
 ├── docs-site/                 # Zensical documentation source
 │   ├── zensical.toml
 │   └── docs/
