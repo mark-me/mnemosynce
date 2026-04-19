@@ -16,6 +16,7 @@ from flask import (
 )
 
 from web.auth import login_required
+from web.setup_guard import setup_complete_required
 from web.scheduler import (
     _schedule_path,
     get_job_status,
@@ -46,7 +47,18 @@ def _validate_cron(expr: str) -> str | None:
 
 @bp.route("/")
 @login_required
+@setup_complete_required
 def index():
+    """Render the standalone schedule management page in operations mode.
+
+    This view is only reachable after setup is complete.  During the wizard,
+    schedule configuration is handled by ``/setup/schedule`` instead.
+
+    Requires completed setup; redirects to the wizard otherwise.
+
+    Returns:
+        Rendered ``web/schedule.html`` template.
+    """
     app = current_app._get_current_object()
     return render_template("web/schedule.html", cfg=load_schedule(app), status=get_job_status(app))
 
@@ -89,7 +101,15 @@ def remove():
 
 @bp.route("/run-now", methods=["POST"])
 @login_required
+@setup_complete_required
 def run_now():
+    """Trigger a manual backup run in a background thread.
+
+    Requires completed setup so a backup cannot be triggered before the
+    configuration and (if needed) SSH keys are in place.
+
+    Redirects to the progress page so the user can watch the run live.
+    """
     global _manual_run_active
     if _manual_run_active:
         flash("A backup run is already in progress.", "warning")
@@ -113,7 +133,18 @@ def run_now():
 
 @bp.route("/status")
 @login_required
+@setup_complete_required
 def status():
+    """Return a JSON snapshot of the current scheduler and manual-run state.
+
+    Polled by the schedule page to update the "next run" display and the
+    running indicator without a full page reload.
+
+    Requires completed setup; redirects to the wizard otherwise.
+
+    Returns:
+        JSON object with scheduler status and ``manual_running`` flag.
+    """
     data = get_job_status(current_app._get_current_object())
     data["manual_running"] = _manual_run_active
     return jsonify(data)

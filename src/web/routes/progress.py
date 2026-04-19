@@ -1,5 +1,10 @@
 """Progress view routes.
 
+All views require both authentication (``login_required``) and completed
+setup (``setup_complete_required``).  Unauthenticated users are redirected
+to the login page; users who have not finished the wizard are redirected
+to ``/setup/``.
+
 GET  /progress/          — HTML page showing live or last run output
 GET  /progress/stream    — SSE stream of log lines and state updates
 GET  /progress/state     — JSON snapshot of the current run state
@@ -12,6 +17,7 @@ import time
 from flask import Blueprint, Response, render_template, stream_with_context
 
 from web.auth import login_required
+from web.setup_guard import setup_complete_required
 from web.run_state import state
 
 logger = logging.getLogger(__name__)
@@ -25,14 +31,30 @@ _KEEPALIVE_INTERVAL = 5
 
 @bp.route("/")
 @login_required
+@setup_complete_required
 def index():
+    """Render the live progress page showing the current or last run.
+
+    Requires completed setup; redirects to the wizard otherwise.
+
+    Returns:
+        Rendered ``web/progress.html`` template.
+    """
     snap = state.snapshot()
     return render_template("web/progress.html", snap=snap)
 
 
 @bp.route("/state")
 @login_required
+@setup_complete_required
 def state_json():
+    """Return the current run-state snapshot as JSON.
+
+    Requires completed setup; redirects to the wizard otherwise.
+
+    Returns:
+        A JSON ``Response`` containing the output of ``state.snapshot()``.
+    """
     return Response(
         json.dumps(state.snapshot()),
         mimetype="application/json",
@@ -41,6 +63,7 @@ def state_json():
 
 @bp.route("/stream")
 @login_required
+@setup_complete_required
 def stream():
     """Server-Sent Events stream.
 
