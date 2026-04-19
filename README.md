@@ -6,6 +6,8 @@ A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mn
 
 *Ancient memory meets modern sync*
 
+![Mnemosynce Logo](assets/images/modern-mnemosyne-wide.png)
+
 ## ✨ Features
 
 - **Snapshot backups** — Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
