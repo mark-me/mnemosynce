@@ -1,0 +1,184 @@
+{% extends "web/wizard_base.html" %}
+{% block title %}Setup — Connections — Backup Server{% endblock %}
+
+{% block wizard_content %}
+<div class="mb-1">
+  <h2 class="h5 mb-0"><i class="bi bi-wifi me-2 text-success"></i>Test Connections</h2>
+</div>
+<p class="text-body-secondary small mb-3">
+  Verify that the backup server can reach its sources and email provider.
+  Run at least one successful test to unlock the next step.
+</p>
+
+<!-- Connection tested banner -->
+{% if setup_status.connection %}
+<div class="alert alert-success py-2 mb-3 d-flex align-items-center gap-2">
+  <i class="bi bi-check-circle-fill"></i>
+  <span class="small">Connection test passed — you can continue to the next step.</span>
+  {% if next_url %}
+    <a href="{{ next_url }}" class="btn btn-sm btn-success ms-auto">
+      Next <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3">
+
+  <!-- SSH test -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
+        <i class="bi bi-terminal"></i>SSH Connection
+      </div>
+      <div class="card-body">
+        <p class="text-body-secondary small mb-3">
+          Tests ping, SSH login, and optionally a remote directory.
+        </p>
+        <div class="row g-2 mb-3">
+          <div class="col-5">
+            <label class="form-label small mb-1">User</label>
+            <input type="text" class="form-control form-control-sm" id="ssh-user" placeholder="mark">
+          </div>
+          <div class="col-7">
+            <label class="form-label small mb-1">Host</label>
+            <input type="text" class="form-control form-control-sm" id="ssh-host" placeholder="desktop-ubuntu">
+          </div>
+          <div class="col-12">
+            <label class="form-label small mb-1">
+              Directory <span class="text-body-secondary">(optional)</span>
+            </label>
+            <input type="text" class="form-control form-control-sm" id="ssh-path" placeholder="/home/mark">
+          </div>
+        </div>
+        <button class="btn btn-success btn-sm w-100" id="ssh-btn" onclick="runTest('ssh')">
+          <i class="bi bi-play me-1"></i>Run test
+        </button>
+      </div>
+      <div class="card-footer bg-transparent" id="ssh-results" style="display:none">
+        <div id="ssh-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email test -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
+        <i class="bi bi-envelope"></i>Email (Gmail SMTP)
+      </div>
+      <div class="card-body">
+        <p class="text-body-secondary small mb-3">
+          Connects to Gmail SMTP and sends a test email using the credentials
+          set in the environment.
+        </p>
+        <div class="mb-3">
+          <label class="form-label small mb-1">
+            Send to <span class="text-body-secondary">(leave blank to use sender)</span>
+          </label>
+          <input type="email" class="form-control form-control-sm"
+                 id="email-recipient" placeholder="you@example.com">
+        </div>
+        <button class="btn btn-success btn-sm w-100" id="email-btn" onclick="runTest('email')">
+          <i class="bi bi-play me-1"></i>Run test
+        </button>
+      </div>
+      <div class="card-footer bg-transparent" id="email-results" style="display:none">
+        <div id="email-steps"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="d-flex justify-content-between align-items-center mt-3">
+  <a href="{{ url_for('setup.step_ssh_keys') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  {% if next_url %}
+    <a href="{{ next_url }}"
+       class="btn btn-sm {% if setup_status.connection %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+       id="next-btn">
+      {% if setup_status.connection %}Next{% else %}Skip for now{% endif %}
+      <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const nextBtn = document.getElementById("next-btn");
+  const nextUrl = {{ (next_url | tojson) if next_url else "null" }};
+
+  function renderSteps(stepsEl, resultsEl, steps, errorMsg) {
+    stepsEl.innerHTML = "";
+    if (errorMsg) {
+      stepsEl.innerHTML =
+        `<div class="text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>${errorMsg}</div>`;
+    } else {
+      steps.forEach(step => {
+        const icon   = step.ok
+          ? '<i class="bi bi-check-circle-fill text-success me-2"></i>'
+          : '<i class="bi bi-x-circle-fill text-danger me-2"></i>';
+        const detail = step.detail
+          ? `<div class="text-body-secondary small ms-4">${step.detail}</div>`
+          : "";
+        stepsEl.insertAdjacentHTML("beforeend",
+          `<div class="py-1">${icon}${step.label}${detail}</div>`);
+      });
+    }
+    resultsEl.style.display = "block";
+  }
+
+  function setLoading(id, loading) {
+    const btn = document.getElementById(id + "-btn");
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? '<span class="spinner-border spinner-border-sm me-1"></span>Testing…'
+      : '<i class="bi bi-play me-1"></i>Run test';
+  }
+
+  async function runTest(type) {
+    setLoading(type, true);
+    let url, body;
+
+    if (type === "ssh") {
+      const user = document.getElementById("ssh-user").value.trim();
+      const host = document.getElementById("ssh-host").value.trim();
+      const path = document.getElementById("ssh-path").value.trim();
+      if (!user || !host) { alert("User and Host are required."); setLoading(type, false); return; }
+      url  = "{{ url_for('connections.test_ssh') }}";
+      body = { user, host, path };
+    } else {
+      const recipient = document.getElementById("email-recipient").value.trim();
+      url  = "{{ url_for('connections.test_email') }}";
+      body = { recipient };
+    }
+
+    try {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json();
+      renderSteps(
+        document.getElementById(type + "-steps"),
+        document.getElementById(type + "-results"),
+        data.steps || [],
+        data.error || null,
+      );
+      // If the test passed, update the Next button to primary and reload
+      // the page so the banner and step badge update automatically.
+      if (data.success && nextUrl) {
+        setTimeout(() => window.location.reload(), 800);
+      }
+    } catch (err) {
+      alert("Request failed: " + err);
+    } finally {
+      setLoading(type, false);
+    }
+  }
+</script>
+{% endblock %}

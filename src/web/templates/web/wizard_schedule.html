@@ -1,0 +1,170 @@
+{% extends "web/wizard_base.html" %}
+{% block title %}Setup — Schedule — Backup Server{% endblock %}
+
+{% block wizard_content %}
+<div class="mb-1">
+  <h2 class="h5 mb-0"><i class="bi bi-clock-history me-2 text-info"></i>Schedule</h2>
+</div>
+<p class="text-body-secondary small mb-3">
+  Configure when backups run automatically.  You can also skip scheduling
+  for now and trigger runs manually from the dashboard.
+</p>
+
+<!-- All-checks-pass banner -->
+{% if all_checks_pass %}
+<div class="alert alert-success py-2 mb-3 d-flex align-items-center gap-2">
+  <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+  <span class="small">All checks passed — setup is complete.</span>
+  <form method="post" action="{{ url_for('setup.complete') }}" class="ms-auto">
+    <button type="submit" class="btn btn-sm btn-success">
+      <i class="bi bi-house me-1"></i>Go to dashboard
+    </button>
+  </form>
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- Schedule form -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
+        <i class="bi bi-calendar-event"></i>Cron schedule
+      </div>
+      <div class="card-body">
+        {# Posts to existing schedule.save, which redirects back here #}
+        <form method="post"
+              action="{{ url_for('schedule.save') }}?next={{ url_for('setup.step_schedule') }}">
+          <div class="mb-3">
+            <label class="form-label small mb-1" for="cron-input">
+              Cron expression
+              <a href="https://crontab.guru" target="_blank" rel="noopener"
+                 class="ms-1 text-body-secondary small">
+                <i class="bi bi-question-circle"></i> help
+              </a>
+            </label>
+            <input type="text" class="form-control form-control-sm font-monospace"
+                   id="cron-input" name="cron"
+                   value="{{ cfg.cron if cfg else '0 2 * * *' }}"
+                   placeholder="0 2 * * *" autocomplete="off"
+                   oninput="updateDescription(this.value)">
+            <div class="form-text" id="cron-description">Every day at 02:00 UTC</div>
+          </div>
+          <div class="mb-3">
+            <div class="small text-body-secondary mb-1">Quick presets</div>
+            <div class="d-flex flex-wrap gap-1">
+              {% for expr, label in [("0 2 * * *","Daily 02:00"),("0 3 * * 0","Weekly Sun 03:00"),("0 4 1 * *","Monthly 1st 04:00"),("0 */6 * * *","Every 6 h")] %}
+              <button type="button" class="btn btn-outline-secondary btn-sm"
+                      onclick="setPreset('{{ expr }}')">{{ label }}</button>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="enabled" name="enabled"
+                   {% if cfg and cfg.enabled %}checked{% endif %}>
+            <label class="form-check-label small" for="enabled">
+              Enable automatic scheduling
+            </label>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-info btn-sm text-white">
+              <i class="bi bi-floppy me-1"></i>Save schedule
+            </button>
+            {% if cfg %}
+            <form method="post"
+                  action="{{ url_for('schedule.remove') }}?next={{ url_for('setup.step_schedule') }}"
+                  onsubmit="return confirm('Remove the schedule?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash me-1"></i>Remove
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status + finish -->
+  <div class="col-12 col-lg-6">
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
+        <i class="bi bi-info-circle"></i>Status
+      </div>
+      <div class="card-body">
+        {% if job_status.scheduled and job_status.enabled %}
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-success">Active</span>
+            <code class="small">{{ job_status.cron }}</code>
+          </div>
+          <div class="small text-body-secondary">
+            Next run: <strong>{{ job_status.next_run_display }}</strong>
+          </div>
+        {% elif job_status.scheduled and not job_status.enabled %}
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-secondary">Disabled</span>
+            <code class="small">{{ job_status.cron }}</code>
+          </div>
+          <div class="small text-body-secondary">Schedule saved but not active.</div>
+        {% else %}
+          <div class="text-body-secondary small">
+            <i class="bi bi-calendar-x me-1"></i>No schedule configured yet.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Finish — always shown; "skip scheduling" path -->
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
+        <i class="bi bi-flag-fill text-success"></i>Finish setup
+      </div>
+      <div class="card-body">
+        <p class="small text-body-secondary mb-3">
+          {% if all_checks_pass %}
+            Everything looks good.  Go to the dashboard to monitor your backups.
+          {% else %}
+            You can finish setup now and configure the remaining items later
+            from the Settings menu.
+          {% endif %}
+        </p>
+        <form method="post" action="{{ url_for('setup.complete') }}">
+          <button type="submit" class="btn btn-success btn-sm w-100">
+            <i class="bi bi-check-lg me-1"></i>
+            {% if all_checks_pass %}Go to dashboard{% else %}Finish setup anyway{% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="mt-3">
+  <a href="{{ url_for('setup.step_connections') if setup_status.has_remote_sources else url_for('setup.step_config') }}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const descriptions = {
+    "0 2 * * *":   "Every day at 02:00 UTC",
+    "0 3 * * 0":   "Every Sunday at 03:00 UTC",
+    "0 4 1 * *":   "1st of every month at 04:00 UTC",
+    "0 */6 * * *": "Every 6 hours",
+  };
+  function updateDescription(val) {
+    document.getElementById("cron-description").textContent =
+      descriptions[val.trim()] || "Custom schedule";
+  }
+  function setPreset(expr) {
+    document.getElementById("cron-input").value = expr;
+    updateDescription(expr);
+  }
+  updateDescription(document.getElementById("cron-input").value);
+</script>
+{% endblock %}

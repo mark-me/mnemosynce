@@ -5,19 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Backup Server{% endblock %}</title>
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png"
         href="{{ url_for('static', filename='images/backup.png') }}">
 
-  <!-- Bootstrap 5.3 — supports data-bs-theme natively -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
         crossorigin="anonymous">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         rel="stylesheet">
-
-  <!-- App styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 
   {% block extra_head %}{% endblock %}
@@ -28,16 +24,13 @@
   <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container-fluid">
 
-      <!-- Brand -->
       <a class="navbar-brand d-flex align-items-center gap-2"
          href="{{ url_for('main.index') }}">
         <img src="{{ url_for('static', filename='images/backup.png') }}"
-             alt="" width="24" height="24"
-             onerror="this.style.display='none'">
+             alt="" width="24" height="24" onerror="this.style.display='none'">
         Backup Server
       </a>
 
-      <!-- Mobile toggler -->
       <button class="navbar-toggler" type="button"
               data-bs-toggle="collapse" data-bs-target="#navbarMain"
               aria-controls="navbarMain" aria-expanded="false"
@@ -46,57 +39,101 @@
       </button>
 
       <div class="collapse navbar-collapse" id="navbarMain">
-        <!-- Main nav links -->
+
+        {% if setup_complete %}
+        {# ── Operations mode ─────────────────────────────────────────────── #}
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}"
-               href="{{ url_for('main.index') }}">
-              <i class="bi bi-house me-1"></i>Home
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint and request.endpoint.startswith('config_editor') %}active{% endif %}"
-               href="{{ url_for('config_editor.editor') }}">
-              <i class="bi bi-file-earmark-code me-1"></i>
-              <span>Configuration</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint and request.endpoint.startswith('connections') %}active{% endif %}"
-               href="{{ url_for('connections.index') }}">
-              <i class="bi bi-wifi me-1"></i>
-              <span>Connections</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint and request.endpoint.startswith('ssh_keys') %}active{% endif %}"
-               href="{{ url_for('ssh_keys.index') }}">
-              <i class="bi bi-key me-1"></i>
-              <span>SSH Keys</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link {% if request.endpoint and request.endpoint.startswith('schedule') %}active{% endif %}"
-               href="{{ url_for('schedule.index') }}">
-              <i class="bi bi-clock-history me-1"></i>
-              <span>Schedule</span>
-            </a>
-          </li>
           <li class="nav-item">
             <a class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard') %}active{% endif %}"
                href="{{ url_for('dashboard.index') }}">
-              <i class="bi bi-speedometer2 me-1"></i>
-              <span>Dashboard</span>
+              <i class="bi bi-speedometer2 me-1"></i>Dashboard
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link {% if request.endpoint and request.endpoint.startswith('progress') %}active{% endif %}"
                href="{{ url_for('progress.index') }}">
-              <i class="bi bi-activity me-1"></i>
-              <span>Progress</span>
+              <i class="bi bi-activity me-1"></i>Progress
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint and request.endpoint.startswith('schedule') %}active{% endif %}"
+               href="{{ url_for('schedule.index') }}">
+              <i class="bi bi-clock-history me-1"></i>Schedule
+            </a>
+          </li>
+
+          <!-- Settings dropdown -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle
+               {% if request.endpoint and request.endpoint.startswith(('config_editor','connections','ssh_keys')) %}active{% endif %}"
+               href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-gear me-1"></i>Settings
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item
+                   {% if request.endpoint and request.endpoint.startswith('config_editor') %}active{% endif %}"
+                   href="{{ url_for('config_editor.editor') }}">
+                  <i class="bi bi-file-earmark-code me-2"></i>Configuration
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item
+                   {% if request.endpoint and request.endpoint.startswith('ssh_keys') %}active{% endif %}"
+                   href="{{ url_for('ssh_keys.index') }}">
+                  <i class="bi bi-key me-2"></i>SSH Keys
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item
+                   {% if request.endpoint and request.endpoint.startswith('connections') %}active{% endif %}"
+                   href="{{ url_for('connections.index') }}">
+                  <i class="bi bi-wifi me-2"></i>Connections
+                </a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+        {% else %}
+        {# ── Setup / wizard mode ─────────────────────────────────────────── #}
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link
+               {% if request.endpoint and request.endpoint.startswith('setup') and 'config' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('setup.step_config') }}">
+              <i class="bi bi-file-earmark-code me-1"></i>
+              <span class="{% if not setup_status.config %}text-warning{% endif %}">Configuration</span>
+            </a>
+          </li>
+          {% if setup_status.has_remote_sources %}
+          <li class="nav-item">
+            <a class="nav-link
+               {% if request.endpoint == 'setup.step_ssh_keys' %}active{% endif %}"
+               href="{{ url_for('setup.step_ssh_keys') }}">
+              <i class="bi bi-key me-1"></i>
+              <span class="{% if not setup_status.ssh_key %}text-warning{% endif %}">SSH Keys</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link
+               {% if request.endpoint == 'setup.step_connections' %}active{% endif %}"
+               href="{{ url_for('setup.step_connections') }}">
+              <i class="bi bi-wifi me-1"></i>
+              <span class="{% if not setup_status.connection %}text-warning{% endif %}">Connections</span>
+            </a>
+          </li>
+          {% endif %}
+          <li class="nav-item">
+            <a class="nav-link
+               {% if request.endpoint == 'setup.step_schedule' %}active{% endif %}"
+               href="{{ url_for('setup.step_schedule') }}">
+              <i class="bi bi-clock-history me-1"></i>
+              <span class="{% if not setup_status.schedule %}text-warning{% endif %}">Schedule</span>
             </a>
           </li>
         </ul>
+        {% endif %}
 
         <!-- Right side: theme toggle + logout -->
         <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
@@ -115,6 +152,7 @@
           {% endif %}
         </ul>
       </div>
+
     </div>
   </nav>
 
@@ -138,7 +176,6 @@
     {% block content %}{% endblock %}
   </main>
 
-  <!-- Footer -->
   <footer class="text-secondary text-center py-3 mt-auto small">
     Backup Server
     {% if config.get('APP_ENV') != 'production' %}
@@ -152,7 +189,6 @@
           integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmqWrgXXXGmqgqW8AJJFOy1WVqUdFr"
           crossorigin="anonymous"></script>
 
-  <!-- Dark/light theme toggle — persisted in localStorage -->
   <script>
     (function () {
       const STORAGE_KEY = "bs-theme";
@@ -166,7 +202,6 @@
         localStorage.setItem(STORAGE_KEY, theme);
       }
 
-      // Initialise from stored preference, then fall back to OS preference
       const stored = localStorage.getItem(STORAGE_KEY);
       const preferred = stored
         || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");

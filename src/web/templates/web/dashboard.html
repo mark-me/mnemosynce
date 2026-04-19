@@ -8,6 +8,48 @@
     <i class="bi bi-clock-history me-1"></i>Full history
   </a>
 </div>
+{# ── Readiness strip — shown when any check is still incomplete ─────────── #}
+{% set all_ok = setup_status.config and setup_status.ssh_key and setup_status.connection and setup_status.schedule %}
+{% if not all_ok %}
+<div class="card shadow-sm border-warning mb-4">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      <span class="small fw-semibold text-warning">
+        <i class="bi bi-exclamation-triangle me-1"></i>Setup checklist
+      </span>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <span class="badge {% if setup_status.config %}bg-success{% else %}bg-warning text-dark{% endif %}">
+        {% if setup_status.config %}<i class="bi bi-check-lg me-1"></i>{% else %}<i class="bi bi-x-lg me-1"></i>{% endif %}
+        Config
+      </span>
+      {% if setup_status.has_remote_sources %}
+      <span class="badge {% if setup_status.ssh_key %}bg-success{% else %}bg-warning text-dark{% endif %}">
+        {% if setup_status.ssh_key %}<i class="bi bi-check-lg me-1"></i>{% else %}<i class="bi bi-x-lg me-1"></i>{% endif %}
+        SSH Key
+      </span>
+      <span class="badge {% if setup_status.connection %}bg-success{% else %}bg-warning text-dark{% endif %}">
+        {% if setup_status.connection %}<i class="bi bi-check-lg me-1"></i>{% else %}<i class="bi bi-x-lg me-1"></i>{% endif %}
+        Connection tested
+      </span>
+      {% endif %}
+      <span class="badge {% if setup_status.schedule %}bg-success{% else %}bg-warning text-dark{% endif %}">
+        {% if setup_status.schedule %}<i class="bi bi-check-lg me-1"></i>{% else %}<i class="bi bi-x-lg me-1"></i>{% endif %}
+        Schedule set
+      </span>
+    </div>
+    {% if not setup_status.config %}
+    <div class="mt-2">
+      <a href="{{ url_for('setup.step_config') }}" class="btn btn-sm btn-warning">
+        <i class="bi bi-arrow-right me-1"></i>Complete setup
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+
 
 <!-- Summary cards -->
 <div class="row g-3 mb-4">

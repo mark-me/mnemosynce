@@ -1,0 +1,127 @@
+{% extends "web/wizard_base.html" %}
+{% block title %}Setup — Configuration — Backup Server{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/theme/material-darker.min.css">
+<style>
+  .CodeMirror {
+    height: clamp(280px, 45vh, 480px);
+    font-size: 0.875rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0 0 var(--bs-border-radius) var(--bs-border-radius);
+  }
+  .editor-toolbar {
+    background: #1e1e2e;
+    border: 1px solid var(--bs-border-color);
+    border-bottom: none;
+    border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+    padding: 0.35rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block wizard_content %}
+<div class="d-flex align-items-center gap-2 mb-1">
+  <h2 class="h5 mb-0"><i class="bi bi-file-earmark-code me-2 text-primary"></i>Configuration</h2>
+  {% if file_exists %}
+    <span class="badge bg-success">Saved</span>
+  {% else %}
+    <span class="badge bg-warning text-dark">Not saved yet</span>
+  {% endif %}
+</div>
+<p class="text-body-secondary small mb-3">
+  Define your backup sources, destinations, and email settings.
+  Edit the YAML below and click <strong>Save</strong>.
+  File: <code>{{ config.CONFIG_PATH }}</code>
+</p>
+
+{% if errors %}
+<div class="alert alert-danger py-2 mb-3">
+  <strong><i class="bi bi-exclamation-triangle me-1"></i>Validation errors:</strong>
+  <ul class="mb-0 mt-1 ps-3">
+    {% for error in errors %}<li class="small">{{ error }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{#
+  The save action posts to the standard config editor endpoint.
+  After saving, it redirects back to this wizard step via `next`.
+#}
+<form method="post" action="{{ url_for('config_editor.save') }}?next={{ url_for('setup.step_config') }}"
+      id="editor-form">
+  <div class="card shadow-sm mb-3">
+    <div class="card-body p-0">
+      <div class="editor-toolbar">
+        <span class="text-secondary small"><i class="bi bi-filetype-yml me-1"></i>backup_config.yml</span>
+        <span class="ms-auto text-secondary small" id="lint-status"></span>
+      </div>
+      <textarea name="raw_yaml" id="raw-yaml-input" class="d-none">{{ raw_yaml }}</textarea>
+      <div id="codemirror-host"></div>
+    </div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-floppy me-1"></i>Save configuration
+    </button>
+    {% if file_exists and next_url %}
+      <a href="{{ next_url }}" class="btn btn-outline-secondary ms-auto">
+        Next <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/selection/active-line.min.js"></script>
+<script>
+  const textarea = document.getElementById("raw-yaml-input");
+  const host     = document.getElementById("codemirror-host");
+  const form     = document.getElementById("editor-form");
+  const status   = document.getElementById("lint-status");
+  const isDark   = () => document.documentElement.getAttribute("data-bs-theme") === "dark";
+
+  const editor = CodeMirror(host, {
+    value: textarea.value,
+    mode: "yaml",
+    theme: isDark() ? "material-darker" : "default",
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    styleActiveLine: true,
+    indentUnit: 2,
+    tabSize: 2,
+    indentWithTabs: false,
+    extraKeys: { Tab: cm => cm.execCommand("indentMore"), "Shift-Tab": cm => cm.execCommand("indentLess") },
+  });
+
+  new MutationObserver(() => {
+    editor.setOption("theme", isDark() ? "material-darker" : "default");
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+
+  form.addEventListener("submit", () => { textarea.value = editor.getValue(); form.appendChild(textarea); });
+
+  const savedValue = editor.getValue();
+  editor.on("change", () => {
+    const dirty = editor.getValue() !== savedValue;
+    status.textContent = dirty ? "Unsaved changes" : "";
+    status.className   = dirty ? "ms-auto text-warning small" : "ms-auto text-secondary small";
+  });
+
+  window.addEventListener("beforeunload", e => { if (editor.getValue() !== savedValue) e.preventDefault(); });
+</script>
+{% endblock %}

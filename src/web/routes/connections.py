@@ -9,6 +9,7 @@ import subprocess
 from flask import Blueprint, current_app, jsonify, render_template, request
 
 from web.auth import login_required
+from web.setup_state import mark_connection_tested
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("connections", __name__, url_prefix="/connections")
@@ -235,7 +236,10 @@ def test_ssh():
     path = data.get("path", "").strip()
     if not user or not host:
         return jsonify({"success": False, "steps": [], "error": "user and host are required"}), 400
-    return jsonify(_test_ssh(user, host, path))
+    result = _test_ssh(user, host, path)
+    if result.get("success"):
+        mark_connection_tested()
+    return jsonify(result)
 
 
 @bp.route("/email", methods=["POST"])
@@ -259,4 +263,7 @@ def test_email():
                 "error": "GMAIL_ADDRESS and GMAIL_PASSWORD must be set in the environment.",
             }
         ), 400
-    return jsonify(_test_email(sender, password, recipient))
+    result = _test_email(sender, password, recipient)
+    if result.get("success"):
+        mark_connection_tested()
+    return jsonify(result)
