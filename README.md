@@ -11,6 +11,7 @@ A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mn
 ## ✨ Features
 
 - **Snapshot backups** — Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
+- **Simple restores** — Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` — no special tool needed
 - **Smart retention** — Automatically prunes old backups according to your policy
 - **Remote sync** — Securely mirrors everything to a secondary location over SSH
 - **Web dashboard** — Real-time status, history, configuration editor, and progress monitoring
@@ -24,10 +25,23 @@ A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mn
 - **Colors**: Deep mythological blues & purples with vibrant teal accents
 - **Vibe**: Calm, trustworthy, timeless — like an ancient library that never forgets
 
+## 🔁 Restoring is just copying
+
+Every snapshot is a **plain, browsable directory**. There is no proprietary format, no import command, no restore wizard. When you need a file back, you already know how:
+
+```bash
+# Restore a single file
+cp /mnt/backup/local/Documents/2026-04-19/report.pdf ~/Documents/report.pdf
+
+# Restore an entire snapshot
+rsync -az /mnt/backup/local/Documents/2026-04-19/ /home/user/Documents/
+```
+
+Unchanged files are stored as hard links across snapshots, so each dated folder looks complete while taking only a fraction of the space. Deleting one snapshot never affects the others.
+
 ## 📖 Documentation
 
-Full user and developer documentation is available at the project's GitHub Pages site.
-See `docs-site/` for the source, built with [Zensical](https://zensical.org).
+Full user and developer documentation — including a [full restore guide](docs-site/docs/user/restoring.md) — is available at the project's GitHub Pages site. See `docs-site/` for the source, built with [Zensical](https://zensical.org).
 
 ## 📥 Quick start
 
