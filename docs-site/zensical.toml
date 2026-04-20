@@ -15,6 +15,7 @@ nav = [
     { "Scheduling"        = "user/scheduling.md" },
     { "Monitoring"        = "user/monitoring.md" },
     { "Docker"            = "user/docker.md" },
+    { "Restoring files"   = "user/restoring.md" },
   ]},
   { "Developer guide" = [
     { "Overview"          = "developer/index.md" },
