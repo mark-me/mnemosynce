@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Backup Server{% endblock %}</title>
+  <title>{% block title %}Mnemosynce{% endblock %}</title>
 
   <link rel="icon" type="image/png"
         href="{{ url_for('static', filename='images/backup.png') }}">
@@ -177,7 +177,7 @@
   </main>
 
   <footer class="text-secondary text-center py-3 mt-auto small">
-    Backup Server
+    Mnemosynce
     {% if config.get('APP_ENV') != 'production' %}
       <span class="badge bg-warning text-dark ms-2">
         {{ config.get('APP_ENV', 'development') }}

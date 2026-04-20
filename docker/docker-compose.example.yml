@@ -1,0 +1,22 @@
+services:
+
+  mnemosynce:
+    image: ghcr.io/mark-me/mnemosynce:0.1.0
+    container_name: mnemosynce
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=production
+      - TZ=Europe/Amsterdam
+    volumes:
+      # Application state: config, database, SSH keys, schedule
+      - /data/mnemosynce:/data
+      # Backup sources and destinations — same mounts used by other services
+      - /data:/mnt/data:ro
+      - /mnt/pool:/mnt/pool
+      - /mnt/wdnas:/mnt/wdnas
+      # SSH key for syncing to pibackup — written by sops-nix at boot
+      - /root/.ssh/id_ed25519_backup:/root/.ssh/id_ed25519_backup:ro
+    ports:
+      - 5003:5000
