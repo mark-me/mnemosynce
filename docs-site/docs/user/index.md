@@ -23,3 +23,4 @@ Before you begin, make sure you have:
 - [ ] Generate [SSH keys](ssh-keys.md) for passwordless access to remote hosts
 - [ ] Test connectivity and [set a schedule](scheduling.md)
 - [ ] Watch your first run in the [dashboard and progress view](monitoring.md)
+- [ ] Know how to [restore files](restoring.md) when you need them

@@ -47,6 +47,9 @@ dev = [
     "mypy",
     "ruff",
 ]
+docs = [
+    "zensical>=0.0.33",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
