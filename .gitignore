@@ -211,3 +211,5 @@ log.*
 log.json
 log.db
 excludes.lst
+
+docs-site/site/*

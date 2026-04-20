@@ -47,3 +47,21 @@ flowchart LR
 | **Sync** | `rsync` the local backup directory to a remote machine over SSH |
 
 After all tasks finish, an HTML email report summarises what succeeded and what failed, with log files attached for any failed steps.
+
+## Serving the docs locally
+
+Install the `docs` extra from the project root, then start the live-reload server:
+
+```bash
+uv sync --extra docs
+cd docs-site
+python -m zensical serve
+```
+
+The site is served at [http://127.0.0.1:8000](http://127.0.0.1:8000) and reloads automatically whenever you save a Markdown file. To produce a static build instead:
+
+```bash
+python -m zensical build --clean
+```
+
+Output goes to `docs-site/site/`.

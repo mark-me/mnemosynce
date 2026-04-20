@@ -20,6 +20,12 @@ uv sync --extra dev
 
 This installs the application dependencies plus the dev extras: `pytest`, `pytest-cov`, `mypy`, and `ruff`.
 
+To work on the documentation, install the `docs` extra instead (or alongside `dev`):
+
+```bash
+uv sync --extra docs
+```
+
 ## Environment
 
 ```bash

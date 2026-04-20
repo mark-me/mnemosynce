@@ -289,6 +289,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#serving-the-docs-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serving the docs locally
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -980,6 +991,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#serving-the-docs-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serving the docs locally
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1053,6 +1075,16 @@
 </tbody>
 </table>
 <p>After all tasks finish, an HTML email report summarises what succeeded and what failed, with log files attached for any failed steps.</p>
+<h2 id="serving-the-docs-locally">Serving the docs locally<a class="headerlink" href="#serving-the-docs-locally" title="Permanent link">&para;</a></h2>
+<p>Install the <code>docs</code> extra from the project root, then start the live-reload server:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>docs
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>docs-site
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python<span class="w"> </span>-m<span class="w"> </span>zensical<span class="w"> </span>serve
+</span></code></pre></div>
+<p>The site is served at <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a> and reloads automatically whenever you save a Markdown file. To produce a static build instead:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>zensical<span class="w"> </span>build<span class="w"> </span>--clean
+</span></code></pre></div>
+<p>Output goes to <code>docs-site/site/</code>.</p>
 
 
 

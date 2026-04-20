@@ -1170,17 +1170,20 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>dev
 </span></code></pre></div>
 <p>This installs the application dependencies plus the dev extras: <code>pytest</code>, <code>pytest-cov</code>, <code>mypy</code>, and <code>ruff</code>.</p>
-<h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Edit .env — the defaults work for development</span>
+<p>To work on the documentation, install the <code>docs</code> extra instead (or alongside <code>dev</code>):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>docs
 </span></code></pre></div>
-<div class="language-ini highlight"><span class="filename">.env</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="na">APP_ENV</span><span class="o">=</span><span class="s">development</span><span class="w">        </span><span class="c1"># disables login checks</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="na">SECRET_KEY</span><span class="o">=</span><span class="s">change-me-locally</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="na">ADMIN_USER</span><span class="o">=</span><span class="s">admin</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="na">ADMIN_PASSWORD</span><span class="o">=</span><span class="s">dev-password</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="na">GMAIL_ADDRESS</span><span class="o">=</span><span class="s">your.account@gmail.com</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="na">GMAIL_PASSWORD</span><span class="o">=</span><span class="s">your-app-password</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="na">DATA_ROOT</span><span class="o">=</span><span class="s">dev-data</span><span class="w">         </span><span class="c1"># created automatically</span>
+<h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Edit .env — the defaults work for development</span>
+</span></code></pre></div>
+<div class="language-ini highlight"><span class="filename">.env</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="na">APP_ENV</span><span class="o">=</span><span class="s">development</span><span class="w">        </span><span class="c1"># disables login checks</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="na">SECRET_KEY</span><span class="o">=</span><span class="s">change-me-locally</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="na">ADMIN_USER</span><span class="o">=</span><span class="s">admin</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="na">ADMIN_PASSWORD</span><span class="o">=</span><span class="s">dev-password</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="na">GMAIL_ADDRESS</span><span class="o">=</span><span class="s">your.account@gmail.com</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="na">GMAIL_PASSWORD</span><span class="o">=</span><span class="s">your-app-password</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="na">DATA_ROOT</span><span class="o">=</span><span class="s">dev-data</span><span class="w">         </span><span class="c1"># created automatically</span>
 </span></code></pre></div>
 <p>In <code>development</code> mode:</p>
 <ul>
@@ -1189,13 +1192,13 @@
 <li>Debug mode is on (auto-reload on code changes)</li>
 </ul>
 <h2 id="run-the-dev-server">Run the dev server<a class="headerlink" href="#run-the-dev-server" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>flask<span class="w"> </span>--app<span class="w"> </span>src/web/app:create_app<span class="w"> </span>run<span class="w"> </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span>--port<span class="w"> </span><span class="m">5000</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>flask<span class="w"> </span>--app<span class="w"> </span>src/web/app:create_app<span class="w"> </span>run<span class="w"> </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span>--port<span class="w"> </span><span class="m">5000</span>
 </span></code></pre></div>
 <p>Or use the VS Code launch configuration in <code>.vscode/launch.json</code>.</p>
 <h2 id="code-style">Code style<a class="headerlink" href="#code-style" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w"> </span>tests/<span class="w">      </span><span class="c1"># lint</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src/<span class="w"> </span>tests/<span class="w">     </span><span class="c1"># format</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>src/<span class="w">                   </span><span class="c1"># type check</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w"> </span>tests/<span class="w">      </span><span class="c1"># lint</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src/<span class="w"> </span>tests/<span class="w">     </span><span class="c1"># format</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>src/<span class="w">                   </span><span class="c1"># type check</span>
 </span></code></pre></div>
 <p>Ruff is configured in <code>pyproject.toml</code> with <code>line-length = 100</code> and the <code>E</code>, <code>F</code>, <code>I</code>, <code>UP</code> rule sets.</p>
 <h2 id="project-dependencies">Project dependencies<a class="headerlink" href="#project-dependencies" title="Permanent link">&para;</a></h2>
