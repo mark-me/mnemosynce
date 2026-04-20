@@ -20,11 +20,6 @@ A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mn
 - **Email reports** — Rich HTML summaries with log attachments on failures
 - **Multi-source** — Supports local paths and remote SSH sources (`user@host:/path`)
 
-## 🎨 Design
-
-- **Colors**: Deep mythological blues & purples with vibrant teal accents
-- **Vibe**: Calm, trustworthy, timeless — like an ancient library that never forgets
-
 ## 🔁 Restoring is just copying
 
 Every snapshot is a **plain, browsable directory**. There is no proprietary format, no import command, no restore wizard. When you need a file back, you already know how:
