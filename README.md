@@ -36,7 +36,7 @@ Unchanged files are stored as hard links across snapshots, so each dated folder 
 
 ## 📖 Documentation
 
-Full user and developer documentation — including a [full restore guide](docs-site/docs/user/restoring.md) — is available at the project's GitHub Pages site. See `docs-site/` for the source, built with [Zensical](https://zensical.org).
+Full user and developer documentation — including a [full restore guide](https://mark-me.github.io/mnemosynce/user/restoring/#restoring-from-the-remote-store) — is available at the project's GitHub Pages site. See `docs-site/` for the source, built with [Zensical](https://zensical.org).
 
 ## 📥 Quick start
 
