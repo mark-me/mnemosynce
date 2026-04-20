@@ -191,8 +191,8 @@ def _add_smtp_login_and_send_steps(
             steps.append({"label": f"SMTP login as {sender}", "ok": True, "detail": ""})
             body = (
                 f"From: {sender}\r\nTo: {recipient}\r\n"
-                f"Subject: Backup Server — connection test\r\n\r\n"
-                f"This is a test email from your Backup Server web UI.\r\n"
+                f"Subject: Mnemosynce — connection test\r\n\r\n"
+                f"This is a test email from your Mnemosynce web UI.\r\n"
             )
             smtp.sendmail(sender, recipient, body)
             steps.append({"label": f"Send test email to {recipient}", "ok": True, "detail": ""})

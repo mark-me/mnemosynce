@@ -56,7 +56,7 @@ def _empty_template() -> str:
         str: A multi-line YAML string used to seed a new configuration file.
     """
     return """\
-# Backup Server configuration
+# Mnemosynce configuration
 dir_backup_local: /mnt/backup/local
 dir_backup_remote: user@backup-host:/mnt/backup/remote
 email_sender: your.account@gmail.com
