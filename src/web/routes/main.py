@@ -1,6 +1,6 @@
 """Main routes — home page entry point."""
 
-from flask import Blueprint, redirect, render_template, url_for, current_app
+from flask import Blueprint, current_app, redirect, url_for
 
 from web.auth import login_required
 from web.setup_state import is_setup_complete

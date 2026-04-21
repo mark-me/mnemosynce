@@ -1,7 +1,6 @@
 """YAML configuration editor routes."""
 
 import logging
-
 import re
 from pathlib import Path
 
@@ -125,30 +124,53 @@ def _validate(raw_yaml: str) -> list:
     Returns:
         list: A list of error message strings; empty when the configuration is valid.
     """
-    errors = []
-    try:
-        parsed = yaml.safe_load(raw_yaml)
-    except yaml.YAMLError as exc:
-        return [f"YAML syntax error: {exc}"]
+    parsed, parse_error = _parse_yaml(raw_yaml)
+    if parse_error:
+        return [parse_error]
+
     if not isinstance(parsed, dict):
         return ["Config must be a YAML mapping."]
+
+    errors: list[str] = []
+    _validate_required_keys(parsed, errors)
+    _validate_tasks_section(parsed, errors)
+    return errors
+
+
+def _parse_yaml(raw_yaml: str) -> tuple[object, str | None]:
+    """Parse YAML and return (parsed_obj, error_message_or_None)."""
+    try:
+        return yaml.safe_load(raw_yaml), None
+    except yaml.YAMLError as exc:
+        return None, f"YAML syntax error: {exc}"
+
+
+def _validate_required_keys(parsed: dict, errors: list[str]) -> None:
+    """Validate presence of required top-level keys."""
     required = ["dir_backup_local", "dir_backup_remote", "email_sender", "email_report", "tasks"]
-    missing = [k for k in required if k not in parsed]
-    if missing:
+    if missing := [k for k in required if k not in parsed]:
         errors.append(f"Missing required keys: {', '.join(missing)}")
+
+
+def _validate_tasks_section(parsed: dict, errors: list[str]) -> None:
+    """Validate the structure of the 'tasks' section."""
     tasks = parsed.get("tasks")
     if isinstance(tasks, list):
-        for i, task in enumerate(tasks):
-            if not isinstance(task, dict):
-                errors.append(f"Task {i + 1} must be a mapping.")
-                continue
-            for key in ("name", "dir_source"):
-                if key not in task:
-                    name = task.get("name", f"#{i + 1}")
-                    errors.append(f"Task '{name}' is missing required key '{key}'.")
+        _validate_each_task(tasks, errors)
     elif tasks is not None:
         errors.append("'tasks' must be a list.")
-    return errors
+
+
+def _validate_each_task(tasks: list, errors: list[str]) -> None:
+    """Validate individual task entries."""
+    for i, task in enumerate(tasks):
+        if not isinstance(task, dict):
+            errors.append(f"Task {i + 1} must be a mapping.")
+            continue
+        for key in ("name", "dir_source"):
+            if key not in task:
+                name = task.get("name", f"#{i + 1}")
+                errors.append(f"Task '{name}' is missing required key '{key}'.")
 
 
 @bp.route("/", methods=["GET"])
@@ -183,15 +205,29 @@ def save():
     """
     raw = request.form.get("raw_yaml", "")
     if errors := _validate(raw):
-        session[_SESSION_KEY] = raw
-        for error in errors:
-            flash(error, "danger")
-        return render_template(
+        return _render_validation_errors(raw, errors)
+
+    return _persist_and_redirect(raw)
+
+
+def _render_validation_errors(raw: str, errors: list[str]):
+    """Render the editor template with validation errors for an invalid config."""
+    session[_SESSION_KEY] = raw
+    for error in errors:
+        flash(error, "danger")
+    return (
+        render_template(
             "web/config_editor.html",
             raw_yaml=raw,
             file_exists=_config_path().exists(),
             errors=errors,
-        ), 422
+        ),
+        422,
+    )
+
+
+def _persist_and_redirect(raw: str):
+    """Write a valid configuration to disk, emit warnings, and redirect."""
     _config_path().write_text(raw, encoding="utf-8")
     session.pop(_SESSION_KEY, None)
     parsed = yaml.safe_load(raw)

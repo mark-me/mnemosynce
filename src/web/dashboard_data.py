@@ -127,21 +127,32 @@ def get_task_history(db_path: Path, task_name: str | None = None, limit: int = 5
     runs: list[dict] = []
     for r in run_rows:
         key = (r["id_task"], r["dt_task_start"])
-        success = r["step_count"] == r["ok_steps"]
-        elapsed_secs = (r["dt_task_end"] or r["dt_task_start"]) - r["dt_task_start"]
-        h, rem = divmod(int(elapsed_secs), 3600)
-        m, s = divmod(rem, 60)
-        runs.append(
-            {
-                "task": r["id_task"],
-                "started": _ts(r["dt_task_start"]),
-                "ended": _ts(r["dt_task_end"]),
-                "elapsed": f"{h:02d}:{m:02d}:{s:02d}",
-                "success": success,
-                "steps": steps_by_run.get(key, []),
-            }
-        )
+        runs.append(_build_run_dict(r, steps_by_run.get(key, [])))
     return runs
+
+
+def _build_run_dict(row: sqlite3.Row, steps: list[dict]) -> dict:
+    """Build a response dictionary for a single task run row.
+
+    Args:
+        row (sqlite3.Row): Aggregated run row from the database.
+        steps (list[dict]): Pre-built list of step dictionaries for this run.
+
+    Returns:
+        dict: A dictionary describing the run, including timing and success info.
+    """
+    success = row["step_count"] == row["ok_steps"]
+    elapsed_secs = (row["dt_task_end"] or row["dt_task_start"]) - row["dt_task_start"]
+    h, rem = divmod(int(elapsed_secs), 3600)
+    m, s = divmod(rem, 60)
+    return {
+        "task": row["id_task"],
+        "started": _ts(row["dt_task_start"]),
+        "ended": _ts(row["dt_task_end"]),
+        "elapsed": f"{h:02d}:{m:02d}:{s:02d}",
+        "success": success,
+        "steps": steps,
+    }
 
 
 def _fetch_run_and_step_rows(

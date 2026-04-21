@@ -19,7 +19,6 @@ from flask import (
 )
 
 from web.auth import login_required
-from web.setup_guard import setup_complete_required
 from web.scheduler import (
     _schedule_path,
     get_job_status,
@@ -28,6 +27,7 @@ from web.scheduler import (
     remove_schedule,
     save_schedule,
 )
+from web.setup_guard import setup_complete_required
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("schedule", __name__, url_prefix="/schedule")
@@ -72,8 +72,7 @@ def save():
     app = current_app._get_current_object()
     cron = request.form.get("cron", "").strip()
     enabled = request.form.get("enabled") == "on"
-    error = _validate_cron(cron)
-    if error:
+    if error := _validate_cron(cron):
         flash(error, "danger")
         return redirect(url_for("schedule.index"))
     cfg = {"cron": cron, "enabled": enabled}

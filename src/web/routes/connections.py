@@ -186,32 +186,64 @@ def _add_smtp_login_and_send_steps(
     to the recipient while appending detailed step results.
     """
     try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
-            smtp.login(sender, password)
-            steps.append({"label": f"SMTP login as {sender}", "ok": True, "detail": ""})
-            msg = EmailMessage()
-            msg["From"] = sender
-            msg["To"] = recipient
-            msg["Subject"] = "Mnemosynce — connection test"
-            msg.set_content(
-                "This is a test email from your Mnemosynce web UI.\n"
-            )
-            smtp.send_message(msg)
-            steps.append({"label": f"Send test email to {recipient}", "ok": True, "detail": ""})
+        with _open_smtp_connection() as smtp:
+            if not _smtp_login(smtp, steps, sender, password):
+                return False
+            if not _smtp_send_test_email(smtp, steps, sender, recipient):
+                return False
         return True
     except smtplib.SMTPAuthenticationError:
-        steps.append(
-            {
-                "label": f"SMTP login as {sender}",
-                "ok": False,
-                "detail": "Authentication failed — check Gmail address and app password.",
-            }
-        )
+        _append_auth_error_step(steps, sender)
         return False
     except Exception as exc:
-        steps.append({"label": "Send test email", "ok": False, "detail": str(exc)})
+        _append_send_error_step(steps, exc)
         return False
+
+
+def _open_smtp_connection() -> smtplib.SMTP_SSL:
+    """Open an SSL connection to Gmail's SMTP server."""
+    context = ssl.create_default_context()
+    return smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context)
+
+
+def _smtp_login(smtp: smtplib.SMTP_SSL, steps: list[dict], sender: str, password: str) -> bool:
+    """Log in to SMTP and record the login step."""
+    smtp.login(sender, password)
+    steps.append({"label": f"SMTP login as {sender}", "ok": True, "detail": ""})
+    return True
+
+
+def _smtp_send_test_email(
+    smtp: smtplib.SMTP_SSL,
+    steps: list[dict],
+    sender: str,
+    recipient: str,
+) -> bool:
+    """Send a test email and record the send step."""
+    msg = EmailMessage()
+    msg["From"] = sender
+    msg["To"] = recipient
+    msg["Subject"] = "Mnemosynce — connection test"
+    msg.set_content("This is a test email from your Mnemosynce web UI.\n")
+    smtp.send_message(msg)
+    steps.append({"label": f"Send test email to {recipient}", "ok": True, "detail": ""})
+    return True
+
+
+def _append_auth_error_step(steps: list[dict], sender: str) -> None:
+    """Append an authentication error step."""
+    steps.append(
+        {
+            "label": f"SMTP login as {sender}",
+            "ok": False,
+            "detail": "Authentication failed — check Gmail address and app password.",
+        }
+    )
+
+
+def _append_send_error_step(steps: list[dict], exc: Exception) -> None:
+    """Append a generic send error step."""
+    steps.append({"label": "Send test email", "ok": False, "detail": str(exc)})
 
 
 @bp.route("/")
