@@ -224,50 +224,73 @@ def _create_state_handler() -> _logging.Handler:
     This handler formats log records, appends them to run_state, and updates
     step status based on recognised phrases in the message.
     """
-
-    class _StateHandler(_logging.Handler):
-        """Forwards log records to run_state and updates step status."""
-
-        _STEP_START = {
-            "backup": "start backup",
-            "retention": "applying retention",
-            "sync": "syncing local",
-        }
-        _STEP_SUCCESS = {
-            "backup": "step 'backup' succeeded",
-            "retention": "step 'retention' succeeded",
-            "sync": "step 'sync' succeeded",
-        }
-        _STEP_FAIL = {
-            "backup": "step 'backup' failed",
-            "retention": "step 'retention' failed",
-            "sync": "step 'sync' failed",
-        }
-
-        def emit(self, record: _logging.LogRecord) -> None:
-            """Process a log record and update run_state with progress information.
-
-            This forwards the formatted log message to run_state and infers step
-            start, success, or failure by matching known phrases in the message.
-
-            Args:
-                record: The log record emitted by the backup_server logger.
-            """
-            msg = self.format(record)
-            state.add_line(msg)
-            low = msg.lower()
-            for step in STEP_NAMES:
-                if self._STEP_START[step] in low:
-                    state.step_running(step)
-                elif self._STEP_SUCCESS[step] in low:
-                    state.step_done(step, success=True)
-                elif self._STEP_FAIL[step] in low:
-                    state.step_done(step, success=False)
-
     handler = _StateHandler()
+    _configure_state_handler(handler)
+    return handler
+
+
+class _StateHandler(_logging.Handler):
+    """Forwards log records to run_state and updates step status."""
+
+    _STEP_START = {
+        "backup": "start backup",
+        "retention": "applying retention",
+        "sync": "syncing local",
+    }
+    _STEP_SUCCESS = {
+        "backup": "step 'backup' succeeded",
+        "retention": "step 'retention' succeeded",
+        "sync": "step 'sync' succeeded",
+    }
+    _STEP_FAIL = {
+        "backup": "step 'backup' failed",
+        "retention": "step 'retention' failed",
+        "sync": "step 'sync' failed",
+    }
+
+    def emit(self, record: _logging.LogRecord) -> None:
+        """Process a log record and update run_state with progress information.
+
+        This forwards the formatted log message to run_state and infers step
+        start, success, or failure by matching known phrases in the message.
+
+        Args:
+            record: The log record emitted by the backup_server logger.
+        """
+        msg = self.format(record)
+        state.add_line(msg)
+        _update_step_status_from_message(msg, self._STEP_START, self._STEP_SUCCESS, self._STEP_FAIL)
+
+
+def _configure_state_handler(handler: _logging.Handler) -> None:
+    """Configure formatting and log level for the state handler.
+
+    This applies a standard formatter and debug level so all backup log
+    records are captured consistently for the progress view.
+    """
     handler.setFormatter(_logging.Formatter("%(levelname)s %(name)s — %(message)s"))
     handler.setLevel(_logging.DEBUG)
-    return handler
+
+
+def _update_step_status_from_message(
+    message: str,
+    step_start: dict[str, str],
+    step_success: dict[str, str],
+    step_fail: dict[str, str],
+) -> None:
+    """Update run_state step status based on the given log message.
+
+    This inspects the lowercased message for known start, success, or
+    failure phrases and updates the corresponding step in run_state.
+    """
+    low = message.lower()
+    for step in STEP_NAMES:
+        if step_start[step] in low:
+            state.step_running(step)
+        elif step_success[step] in low:
+            state.step_done(step, success=True)
+        elif step_fail[step] in low:
+            state.step_done(step, success=False)
 
 
 def _configure_backup_logger(handler: _logging.Handler) -> _logging.Logger:

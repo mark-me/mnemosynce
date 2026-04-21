@@ -17,8 +17,8 @@ import time
 from flask import Blueprint, Response, render_template, stream_with_context
 
 from web.auth import login_required
-from web.setup_guard import setup_complete_required
 from web.run_state import state
+from web.setup_guard import setup_complete_required
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("progress", __name__, url_prefix="/progress")
@@ -76,6 +76,11 @@ def stream():
     """
 
     def generate():
+        """Yield Server-Sent Events updates for the current or last run.
+
+        This generator streams log lines, state snapshots, keepalive comments,
+        and a final completion event for consumption by the browser client.
+        """
         seq = 0
         idle_since = time.monotonic()
 
@@ -119,4 +124,8 @@ def stream():
 
 
 def _sse(event: str, data: str) -> str:
+    """Format a Server-Sent Events payload string.
+
+    This helper encodes an event name and data into the text format expected by SSE clients.
+    """
     return f"event: {event}\ndata: {data}\n\n"

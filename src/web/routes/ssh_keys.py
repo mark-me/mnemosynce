@@ -63,25 +63,48 @@ def index():
 @login_required
 def generate():
     name = request.form.get("name", "").strip()
-
     if not name:
         flash("Key name is required.", "danger")
         return redirect(url_for("ssh_keys.index"))
 
-    # Reject names with path separators or shell-unsafe characters
-    if any(c in name for c in "/\\. \t\n"):
+    if _is_invalid_key_name(name):
         flash("Key name must not contain spaces, dots, or path separators.", "danger")
         return redirect(url_for("ssh_keys.index"))
 
     ssh_dir = _ssh_dir()
     key_path = ssh_dir / name
 
-    if key_path.exists() or (ssh_dir / f"{name}.pub").exists():
+    if _key_exists(ssh_dir, name, key_path):
         flash(f"A key named '{name}' already exists. Delete it first.", "warning")
         return redirect(url_for("ssh_keys.index"))
 
     comment = request.form.get("comment", f"backup-server/{name}").strip()
 
+    if not _run_ssh_keygen(key_path, comment):
+        return redirect(url_for("ssh_keys.index"))
+
+    flash(f"Key '{name}' generated successfully.", "success")
+    next_url = request.args.get("next") or url_for("ssh_keys.index")
+    return redirect(next_url)
+
+
+def _is_invalid_key_name(name: str) -> bool:
+    """Return True if the provided key name contains unsafe characters."""
+    # Reject names with path separators or shell-unsafe characters
+    return any(c in name for c in "/\\. \t\n")
+
+
+def _key_exists(ssh_dir: Path, name: str, key_path: Path) -> bool:
+    """Return True if a keypair with the given name already exists."""
+    return key_path.exists() or (ssh_dir / f"{name}.pub").exists()
+
+
+def _run_ssh_keygen(key_path: Path, comment: str) -> bool:
+    """Invoke ssh-keygen to create an ed25519 keypair and set permissions.
+
+    Returns:
+        bool: True on success, False if ssh-keygen failed (after flashing error).
+    """
     result = subprocess.run(
         [
             "ssh-keygen",
@@ -102,14 +125,11 @@ def generate():
     if result.returncode != 0:
         logger.error("ssh-keygen failed: %s", result.stderr)
         flash(f"Key generation failed: {result.stderr.strip()}", "danger")
-        return redirect(url_for("ssh_keys.index"))
+        return False
 
     # Ensure private key is readable only by owner
     key_path.chmod(0o600)
-
-    flash(f"Key '{name}' generated successfully.", "success")
-    next_url = request.args.get("next") or url_for("ssh_keys.index")
-    return redirect(next_url)
+    return True
 
 
 @bp.route("/delete", methods=["POST"])

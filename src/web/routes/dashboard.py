@@ -15,8 +15,8 @@ import logging
 from flask import Blueprint, current_app, render_template, request
 
 from web.auth import login_required
-from web.setup_guard import setup_complete_required
 from web.dashboard_data import get_summary, get_task_history, get_task_stats
+from web.setup_guard import setup_complete_required
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
