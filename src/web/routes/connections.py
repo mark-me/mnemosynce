@@ -5,6 +5,7 @@ import smtplib
 import socket
 import ssl
 import subprocess
+from email.message import EmailMessage
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 
@@ -189,12 +190,14 @@ def _add_smtp_login_and_send_steps(
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
             smtp.login(sender, password)
             steps.append({"label": f"SMTP login as {sender}", "ok": True, "detail": ""})
-            body = (
-                f"From: {sender}\r\nTo: {recipient}\r\n"
-                f"Subject: Mnemosynce — connection test\r\n\r\n"
-                f"This is a test email from your Mnemosynce web UI.\r\n"
+            msg = EmailMessage()
+            msg["From"] = sender
+            msg["To"] = recipient
+            msg["Subject"] = "Mnemosynce — connection test"
+            msg.set_content(
+                "This is a test email from your Mnemosynce web UI.\n"
             )
-            smtp.sendmail(sender, recipient, body)
+            smtp.send_message(msg)
             steps.append({"label": f"Send test email to {recipient}", "ok": True, "detail": ""})
         return True
     except smtplib.SMTPAuthenticationError:
