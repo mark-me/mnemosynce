@@ -2,6 +2,9 @@
 
 import logging
 
+import re
+from pathlib import Path
+
 import yaml
 from flask import (
     Blueprint,
@@ -69,6 +72,45 @@ tasks:
       - tmp
       - .cache
 """
+
+
+_REMOTE_RE = re.compile(r"^[^@]+@[^:]+:.+$")
+
+
+def _check_local_paths(parsed: dict) -> list[str]:
+    """Return non-blocking warnings for local paths that do not exist on disk.
+
+    Only local (non-SSH) paths are checked — remote ``user@host:/path``
+    sources cannot be tested from this process.  The warnings are advisory:
+    the config is still saved so the user does not lose their work.
+
+    Args:
+        parsed (dict): The already-validated YAML config as a Python dict.
+
+    Returns:
+        list[str]: Warning strings for each missing local path, possibly empty.
+    """
+    warnings: list[str] = []
+    for field in ("dir_backup_local", "dir_backup_remote"):
+        value = parsed.get(field, "")
+        if value and not _REMOTE_RE.match(str(value)):
+            if not Path(str(value)).is_dir():
+                warnings.append(
+                    f"Path not found: \"{value}\" ({field}) — "
+                    "make sure the volume is mounted."
+                )
+    for task in parsed.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        source = str(task.get("dir_source", ""))
+        if source and not _REMOTE_RE.match(source):
+            if not Path(source).is_dir():
+                warnings.append(
+                    f"Path not found: \"{source}\" "
+                    f"(task \"{task.get('name', '?')}\") — "
+                    "make sure the volume is mounted."
+                )
+    return warnings
 
 
 def _validate(raw_yaml: str) -> list:
@@ -152,7 +194,14 @@ def save():
         ), 422
     _config_path().write_text(raw, encoding="utf-8")
     session.pop(_SESSION_KEY, None)
-    flash("Configuration saved successfully.", "success")
+    parsed = yaml.safe_load(raw)
+    path_warnings = _check_local_paths(parsed) if isinstance(parsed, dict) else []
+    if path_warnings:
+        for w in path_warnings:
+            flash(w, "warning")
+        flash("Configuration saved — check the warnings above.", "success")
+    else:
+        flash("Configuration saved successfully.", "success")
     next_url = request.args.get("next") or url_for("config_editor.editor")
     return redirect(next_url)
 

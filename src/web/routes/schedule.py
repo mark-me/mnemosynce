@@ -2,6 +2,9 @@
 
 import json
 import logging
+import smtplib
+import socket
+import ssl
 import threading
 
 from flask import (
@@ -99,6 +102,42 @@ def remove():
     return redirect(next_url)
 
 
+def _check_gmail(app) -> str | None:
+    """Test Gmail SMTP reachability and authentication before a backup run.
+
+    Performs a quick SMTP SSL handshake and login attempt using the credentials
+    configured in the Flask app.  Returns an error message string when the
+    check fails, or ``None`` when credentials are valid.
+
+    Args:
+        app: The Flask application instance.
+
+    Returns:
+        str | None: A human-readable error message, or ``None`` on success.
+    """
+    sender = app.config.get("GMAIL_ADDRESS", "")
+    password = app.config.get("GMAIL_PASSWORD", "")
+    if not sender or not password:
+        return "GMAIL_ADDRESS and GMAIL_PASSWORD are not set in the environment."
+    try:
+        socket.setdefaulttimeout(5)
+        socket.getaddrinfo("smtp.gmail.com", 465)
+    except OSError:
+        return "Cannot reach smtp.gmail.com:465 — check network connectivity."
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
+            smtp.login(sender, password)
+    except smtplib.SMTPAuthenticationError:
+        return (
+            "Gmail authentication failed — the app password in your environment "
+            "is incorrect or has been revoked."
+        )
+    except Exception as exc:
+        return f"Gmail SMTP error: {exc}"
+    return None
+
+
 @bp.route("/run-now", methods=["POST"])
 @login_required
 @setup_complete_required
@@ -110,11 +149,32 @@ def run_now():
 
     Redirects to the progress page so the user can watch the run live.
     """
+    """Trigger a manual backup run after pre-flight checks.
+
+    Verifies that Gmail credentials are valid before starting.  If the
+    credential check fails the user is redirected back with an actionable
+    error message rather than letting the run fail silently at the
+    email-report step.
+
+    Returns:
+        A redirect to the progress page on success, or back to the referring
+        page with a flash message on pre-flight failure.
+    """
     global _manual_run_active
     if _manual_run_active:
         flash("A backup run is already in progress.", "warning")
         return redirect(url_for("progress.index"))
     app = current_app._get_current_object()
+    gmail_error = _check_gmail(app)
+    if gmail_error:
+        flash(gmail_error, "danger")
+        flash(
+            "Fix your Gmail credentials in "
+            '<a href="/connections/" class="alert-link">Settings → Connections</a> '
+            "before running a backup.",
+            "warning",
+        )
+        return redirect(request.referrer or url_for("schedule.index"))
 
     def _do_run():
         global _manual_run_active

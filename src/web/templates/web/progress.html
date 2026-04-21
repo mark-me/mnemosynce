@@ -104,6 +104,22 @@
 </div>
 {% endif %}
 
+<!-- Contextual action bar — shown when last run failed -->
+<div id="action-bar" class="mb-3" style="display:none">
+  <div class="alert alert-warning py-2 d-flex flex-wrap align-items-center gap-2 mb-0">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+    <span class="small" id="action-bar-msg">The last run encountered errors.</span>
+    <div class="ms-auto d-flex gap-2 flex-shrink-0">
+      <a href="{{ url_for('config_editor.editor') }}" class="btn btn-sm btn-outline-secondary" id="btn-edit-config" style="display:none">
+        <i class="bi bi-file-earmark-code me-1"></i>Edit configuration
+      </a>
+      <a href="{{ url_for('connections.index') }}" class="btn btn-sm btn-outline-secondary" id="btn-test-connections" style="display:none">
+        <i class="bi bi-wifi me-1"></i>Test connections
+      </a>
+    </div>
+  </div>
+</div>
+
 <!-- Terminal output -->
 <div class="card shadow-sm">
   <div class="terminal-toolbar">
@@ -137,12 +153,51 @@
   let lineCount   = 0;
   let eventSource = null;
 
-  const logEl       = document.getElementById("log-output");
-  const countEl     = document.getElementById("line-count");
-  const statusBadge = document.getElementById("status-badge");
-  const taskLabel   = document.getElementById("task-label");
-  const timingLabel = document.getElementById("timing-label");
-  const runBtn      = document.getElementById("run-btn");
+  const logEl          = document.getElementById("log-output");
+  const countEl        = document.getElementById("line-count");
+  const statusBadge    = document.getElementById("status-badge");
+  const taskLabel      = document.getElementById("task-label");
+  const timingLabel    = document.getElementById("timing-label");
+  const runBtn         = document.getElementById("run-btn");
+  const actionBar      = document.getElementById("action-bar");
+  const actionBarMsg   = document.getElementById("action-bar-msg");
+  const btnEditConfig  = document.getElementById("btn-edit-config");
+  const btnTestConns   = document.getElementById("btn-test-connections");
+
+  // Patterns detected in the log stream that trigger specific action buttons.
+  // Each entry: { re: RegExp, msg: string, buttons: string[] }
+  const LOG_ACTIONS = [
+    {
+      re: /username and password not accepted|smtpauthenticationerror|badcredentials/i,
+      msg: "Gmail authentication failed — fix your credentials and try again.",
+      buttons: ["connections"],
+    },
+    {
+      re: /cannot reach back-up (local|source)/i,
+      msg: "A backup path was not found — check your configuration.",
+      buttons: ["config"],
+    },
+    {
+      re: /cannot reach back-up remote/i,
+      msg: "The remote destination was not reachable — check SSH connectivity.",
+      buttons: ["connections"],
+    },
+  ];
+  let _actionTriggered = false;
+
+  function checkLogForActions(line) {
+    if (_actionTriggered) return;
+    for (const action of LOG_ACTIONS) {
+      if (action.re.test(line)) {
+        _actionTriggered = true;
+        actionBarMsg.textContent = action.msg;
+        if (action.buttons.includes("config"))       btnEditConfig.style.display  = "";
+        if (action.buttons.includes("connections"))  btnTestConns.style.display   = "";
+        actionBar.style.display = "";
+        break;
+      }
+    }
+  }
 
   // ---- Helpers -------------------------------------------------------------
   function levelClass(line) {
@@ -161,6 +216,7 @@
     lineCount++;
     countEl.textContent = `${lineCount} line${lineCount === 1 ? "" : "s"}`;
     if (autoscroll) logEl.scrollTop = logEl.scrollHeight;
+    checkLogForActions(text);
   }
 
   function applyState(snap) {
@@ -182,6 +238,14 @@
     if (snap.task_name) taskLabel.textContent = snap.task_name;
     if (snap.started)   timingLabel.textContent = `Started ${snap.started}`;
     if (snap.ended)     timingLabel.textContent += ` · Ended ${snap.ended}`;
+
+    // Reset action bar when a new run starts
+    if (active && _actionTriggered) {
+      _actionTriggered = false;
+      actionBar.style.display = "none";
+      btnEditConfig.style.display  = "none";
+      btnTestConns.style.display   = "none";
+    }
 
     // Run button
     runBtn.disabled = active;

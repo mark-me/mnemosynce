@@ -38,13 +38,28 @@
         Schedule set
       </span>
     </div>
-    {% if not setup_status.config %}
-    <div class="mt-2">
-      <a href="{{ url_for('setup.step_config') }}" class="btn btn-sm btn-warning">
-        <i class="bi bi-arrow-right me-1"></i>Complete setup
+    <div class="mt-2 d-flex flex-wrap gap-2">
+      {% if not setup_status.config %}
+      <a href="{{ url_for('config_editor.editor') }}" class="btn btn-sm btn-warning">
+        <i class="bi bi-file-earmark-code me-1"></i>Edit configuration
       </a>
+      {% endif %}
+      {% if setup_status.has_remote_sources and not setup_status.ssh_key %}
+      <a href="{{ url_for('ssh_keys.index') }}" class="btn btn-sm btn-outline-warning">
+        <i class="bi bi-key me-1"></i>Manage SSH keys
+      </a>
+      {% endif %}
+      {% if setup_status.has_remote_sources and not setup_status.connection %}
+      <a href="{{ url_for('connections.index') }}" class="btn btn-sm btn-outline-warning">
+        <i class="bi bi-wifi me-1"></i>Test connections
+      </a>
+      {% endif %}
+      {% if not setup_status.schedule %}
+      <a href="{{ url_for('schedule.index') }}" class="btn btn-sm btn-outline-warning">
+        <i class="bi bi-clock-history me-1"></i>Set schedule
+      </a>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 </div>
 {% endif %}
