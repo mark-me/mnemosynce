@@ -4,6 +4,8 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 
+from config import DB_PATH
+
 from .backup_task import BackupTask
 from .config_file import ConfigFile
 from .database import LogDB
@@ -68,7 +70,7 @@ def main(
     config = ConfigFile(file_config=file_config)
     backup = config.read()
 
-    with LogDB("log.db") as log_db:
+    with LogDB(DB_PATH) as log_db:
         lst_task_status = []
         for task_config in backup["tasks"]:
             task = BackupTask(
