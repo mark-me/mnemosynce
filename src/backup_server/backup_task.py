@@ -28,6 +28,7 @@ class BackupTask:
     and remote sync, tracks their outcomes, and exposes a structured
     status dictionary for reporting and logging.
     """
+
     def __init__(
         self,
         task: dict,
@@ -304,7 +305,10 @@ class BackupTask:
         remote_pattern = re.compile(r"^(?P<user>[^@]+)@(?P<host>[^:]+):(?P<dir>.+)$")
         if match := remote_pattern.match(dir_location):
             return self._host_reachable(
-                host=match["host"], user=match["user"], dir=match["dir"]
+                host=match["host"],
+                user=match["user"],
+                dir=match["dir"],
+                create_if_missing=create_if_missing,
             )
         path = Path(dir_location)
         if not path.exists():
