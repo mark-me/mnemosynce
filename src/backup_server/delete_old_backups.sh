@@ -21,25 +21,25 @@ fi
 
 listYearlyBackups() {
     for i in 0 1 2 3 4 5; do
-        (echo "$ALL_DIRS" | grep -E "$(date +%Y -d "${i} year ago")-[0-9]{2}-[0-9]{2}" || true) | sort | head -n 1
+        echo "$ALL_DIRS" | { grep -E "$(date +%Y -d "${i} year ago")-[0-9]{2}-[0-9]{2}" || true; } | LC_ALL=C sort | head -n 1
     done
 }
 
 listMonthlyBackups() {
-    for i in {0..12}; do
-        (echo "$ALL_DIRS" | grep -E "$(date +%Y-%m -d "${i} month ago")-[0-9]{2}" || true) | sort | head -n 1
+    for i in $(seq 0 12); do
+        echo "$ALL_DIRS" | { grep -E "$(date +%Y-%m -d "${i} month ago")-[0-9]{2}" || true; } | LC_ALL=C sort | head -n 1
     done
 }
 
 listWeeklyBackups() {
     for i in 0 1 2 3 4; do
-        (echo "$ALL_DIRS" | grep "$(date +%Y-%m-%d -d "last monday -${i} weeks")" || true)
+        echo "$ALL_DIRS" | { grep -F "$(date +%Y-%m-%d -d "last monday -${i} weeks")" || true; }
     done
 }
 
 listDailyBackups() {
     for i in 0 1 2 3 4 5 6; do
-        (echo "$ALL_DIRS" | grep "$(date +%Y-%m-%d -d "-${i} day")" || true)
+        echo "$ALL_DIRS" | { grep -F "$(date +%Y-%m-%d -d "-${i} day")" || true; }
     done
 }
 
@@ -49,7 +49,7 @@ listUniqueBackups() {
         listMonthlyBackups
         listWeeklyBackups
         listDailyBackups
-    } | sort -u
+    } | LC_ALL=C sort -u
 }
 
 KEEP_FILE=$(mktemp)
@@ -66,7 +66,9 @@ echo "Determining backups to delete..." >> "$FILE_LOG"
 
 echo "$ALL_DIRS" | grep -vxFf "$KEEP_FILE" | while read -r file_to_delete; do
     echo "Removing $file_to_delete" >> "$FILE_LOG"
-    if [[ -n "$file_to_delete" && -d "$DIR_SNAPSHOT/$file_to_delete" ]]; then
-        rm -rf -- "$DIR_SNAPSHOT/$file_to_delete" >> "$FILE_LOG" 2>&1
+
+    FULL_PATH="$DIR_SNAPSHOT/$file_to_delete"
+    if [[ -n "$file_to_delete" && -d "$FULL_PATH" && "$FULL_PATH" == "$DIR_SNAPSHOT/"* ]]; then
+        rm -rf -- "$FULL_PATH" >> "$FILE_LOG" 2>&1
     fi
 done
