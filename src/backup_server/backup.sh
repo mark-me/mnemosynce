@@ -48,10 +48,14 @@ function create_backup(){
     fi
 
     echo $TODAY `date +%H:%M:%S` : Starting backup for $TODAY >> $FILE_LOG 2>&1 ;
-    rsync								\
-        -az --delete --delete-excluded --log-file="$FILE_LOG"	\
-        --numeric-ids --exclude-from="$FILE_EXCLUDES"	\
-        $DIR_SOURCE/ $DIR_TODAY;
+    echo "Running rsync from '$DIR_SOURCE' to '$DIR_TODAY'" >> $FILE_LOG
+    rsync \
+        -az --delete --delete-excluded \
+        --mkpath \
+        --log-file="$FILE_LOG" \
+        --numeric-ids \
+        --exclude-from="$FILE_EXCLUDES" \
+        "$DIR_SOURCE"/ "$DIR_TODAY"/
 
 #    if [ "$?" -eq "0" ]
 #    then
