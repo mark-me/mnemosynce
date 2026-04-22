@@ -116,7 +116,9 @@ class BackupTask:
             bool: True if the backup script completed successfully, otherwise False.
         """
         script = self._scripts_dir / "backup.sh"
-        cmd = [str(script), self._name, self._dir_local, self._dir_source]
+        dir_local = self._ensure_dir_path(self._dir_local)
+
+        cmd = [str(script), self._name, dir_local, self._dir_source]
         return self._run_step(
             step_name="backup",
             cmd=cmd,
@@ -137,6 +139,7 @@ class BackupTask:
         """
         script = self._scripts_dir / "delete_old_backups.sh"
         cmd = [str(script), self._name, self._dir_local]
+        logger.info(f"Running command: {' '.join(cmd)}")
         return self._run_step(
             step_name="retention",
             cmd=cmd,
@@ -154,13 +157,17 @@ class BackupTask:
             bool: True if the sync script completed successfully, otherwise False.
         """
         script = self._scripts_dir / "sync_backup_to_remote.sh"
-        cmd = [str(script), self._name, self._dir_local, self._dir_remote]
+        dir_local = self._ensure_dir_path(self._dir_local)
+        dir_remote = self._ensure_dir_path(self._dir_remote)
+
+        cmd = [str(script), self._name, dir_local, dir_remote]
+        logger.info(f"Running command: {' '.join(cmd)}")
         return self._run_step(
             step_name="sync",
             cmd=cmd,
             log_suffix="_sync_remote.log",
-            dir_from=self._dir_local,
-            dir_to=self._dir_remote,
+            dir_from=dir_local,
+            dir_to=dir_remote,
         )
 
     def _run_step(
@@ -334,8 +341,18 @@ class BackupTask:
             ).returncode
             != 0
         ):
-            logger.error(f"Could not find directory '{dir}' on server '{host}'")
-            return False
+            logger.warning(f"Directory '{dir}' not found on '{host}', creating it")
+
+            mkdir_result = self._runner(
+                ["ssh", f"{user}@{host}", "mkdir", "-p", dir],
+                capture_output=True,
+                text=True,
+            )
+            if mkdir_result.returncode != 0:
+                logger.error(
+                    f"Failed to create directory '{dir}' on '{host}': {mkdir_result.stderr}"
+                )
+                return False
         return True
 
     # ------------------------------------------------------------------
@@ -357,4 +374,6 @@ class BackupTask:
 
     def _ensure_dir_path(self, path: str) -> str:
         """Ensure rsync treats path as a directory."""
+        if not path:
+            return path
         return path if path.endswith("/") else f"{path}/"
