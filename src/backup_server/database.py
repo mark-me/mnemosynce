@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class LogDB:
             file_db (str): The file that represents the database
         """
         self._file_db = file_db
+        Path(file_db).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(file_db)
         self._create_tables()
 
