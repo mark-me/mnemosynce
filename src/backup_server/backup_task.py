@@ -304,11 +304,12 @@ class BackupTask:
         remote_pattern = re.compile(r"^(?P<user>[^@]+)@(?P<host>[^:]+):(?P<dir>.+)$")
         if match := remote_pattern.match(dir_location):
             return self._host_reachable(
-                host=match["host"],
-                user=match.group("user"),
-                dir=match.group("dir"),
+                host=match["host"], user=match["user"], dir=match["dir"]
             )
         path = Path(dir_location)
+        if not path.exists():
+            logger.warning(f"Local directory '{path}' does not exist, creating it")
+            path.mkdir(parents=True, exist_ok=True)
         return path.is_dir()
 
     def _host_reachable(self, host: str, user: str, dir: str) -> bool:
