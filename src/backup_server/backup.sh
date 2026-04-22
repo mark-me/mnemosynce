@@ -1,69 +1,78 @@
-#!/bin/bash
+set -euo pipefail
 
-NAME_SNAPSHOT=$1;
-DIR_BACKUP=$2;
-DIR_SOURCE=$3;
+if [[ $# -ne 3 ]]; then
+    echo "Usage: $0 <name> <backup_dir> <source_dir>"
+    exit 1
+fi
 
+NAME_SNAPSHOT=$1
+DIR_BACKUP=$2
+DIR_SOURCE=$3
 
-function create_backup(){
-    FILE_EXCLUDES=excludes.lst;
+create_backup() {
     TODAY=$(date +%Y-%m-%d)
+
     DIR_SNAPSHOT="${DIR_BACKUP%/}/${NAME_SNAPSHOT}"
-    DIR_LASTDAY=${DIR_SNAPSHOT}/$(ls ${DIR_SNAPSHOT} | tail -n 1)
-    DIR_TODAY=${DIR_SNAPSHOT}/${TODAY}
-    FILE_LOG=${NAME_SNAPSHOT}_backup.log
+    DIR_TODAY="${DIR_SNAPSHOT}/${TODAY}"
+    FILE_LOG="${DIR_SNAPSHOT}/backup.log"
+    FILE_EXCLUDES="${DIR_SNAPSHOT}/excludes.lst"
 
-    printf "Log of step 1: Backup - " + $NAME_SNAPSHOT + ' - ' > $FILE_LOG
-    date >> $FILE_LOG
+    # Locking
+    LOCK_FILE="/tmp/${NAME_SNAPSHOT}.lock"
+    exec 200>"$LOCK_FILE"
+    flock -n 200 || {
+        echo "Another backup is already running for $NAME_SNAPSHOT"
+        exit 1
+    }
+    trap 'rm -f "$LOCK_FILE"' EXIT
 
-    # mkdir -p $DIR_SNAPSHOT  >> $FILE_LOG   # Check source directory existence
+    mkdir -p "$DIR_SNAPSHOT"
 
-    # Check source directory existence
-    # if [[ $DIR_SOURCE == *"@"* ]] && [[ $DIR_SOURCE == *":"* ]];
-    # then
-    #     readarray -d : -t host_dir <<<"$DIR_SOURCE"
-    #     if ssh host_dir[0] '[! -d host_dir[1] ]';
-    #        echo $TODAY `date +%H:%M:%S` : Source directory $DIR_SOURCE directory does not exist >> $FILE_LOG 2>&1
-    #        exit 1
-    #     fi
-    # elif [ ! -d "$DIR_SOURCE" ];
-    # then
-    #     echo $TODAY `date +%H:%M:%S` : Source directory $DIR_SOURCE directory does not exist >> $FILE_LOG 2>&1
-    #     exit 1
-    # fi
+    # Init log
+    echo "===== Backup $NAME_SNAPSHOT $(date) =====" >> "$FILE_LOG"
 
-    if [[ ! -e "$DIR_TODAY" && "$DIR_LASTDAY" == "$DIR_SNAPSHOT/" ]]; then
-        echo "$TODAY $(date +%H:%M:%S) : Create initial backup directory $DIR_TODAY" >> "$FILE_LOG"
-        mkdir -p "$DIR_TODAY" >> "$FILE_LOG" 2>&1
+    # Ensure excludes file exists
+    [[ -f "$FILE_EXCLUDES" ]] || touch "$FILE_EXCLUDES"
 
-    elif [[ ! -e "$DIR_TODAY" ]]; then
-        echo "$TODAY $(date +%H:%M:%S) : Creating snapshot from $DIR_LASTDAY to $DIR_TODAY" >> "$FILE_LOG"
-        cp -al "$DIR_LASTDAY" "$DIR_TODAY" >> "$FILE_LOG" 2>&1
+    LAST_DAY=$(find "$DIR_SNAPSHOT" -mindepth 1 -maxdepth 1 -type d \
+        -exec basename {} \; | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' | sort | tail -n 1 || true)
 
+    if [[ "$LAST_DAY" == "$TODAY" ]]; then
+        LAST_DAY=""
+    fi
+
+    DIR_LASTDAY=""
+    if [[ -n "$LAST_DAY" ]]; then
+        DIR_LASTDAY="${DIR_SNAPSHOT}/${LAST_DAY}"
+    fi
+
+    if [[ ! -d "$DIR_TODAY" ]]; then
+        if [[ -n "$LAST_DAY" ]]; then
+            echo "$TODAY $(date +%H:%M:%S) : Creating snapshot from $DIR_LASTDAY to $DIR_TODAY" >> "$FILE_LOG"
+            cp -al "$DIR_LASTDAY" "$DIR_TODAY" >> "$FILE_LOG" 2>&1
+        else
+            echo "$TODAY $(date +%H:%M:%S) : Creating initial backup directory $DIR_TODAY" >> "$FILE_LOG"
+            mkdir -p "$DIR_TODAY" >> "$FILE_LOG" 2>&1
+        fi
     else
         echo "$TODAY $(date +%H:%M:%S) : Backup for $TODAY already exists, continuing (rsync will update)" >> "$FILE_LOG"
     fi
 
-    echo $TODAY `date +%H:%M:%S` : Starting backup for $TODAY >> $FILE_LOG 2>&1 ;
-    echo "Running rsync from '$DIR_SOURCE' to '$DIR_TODAY'" >> $FILE_LOG
-    rsync \
+    echo "$TODAY $(date +%H:%M:%S) : Starting backup for $TODAY" >> "$FILE_LOG"
+    echo "Running rsync from '$DIR_SOURCE' to '$DIR_TODAY'" >> "$FILE_LOG"
+
+    if ! rsync \
         -az --delete --delete-excluded \
-        --log-file="$FILE_LOG" \
         --numeric-ids \
         --exclude-from="$FILE_EXCLUDES" \
-        "$DIR_SOURCE"/ "$DIR_TODAY"/
-
-#    if [ "$?" -eq "0" ]
-#    then
-#        rm -rf rm /home/pi/queue/*
-#        echo $TODAY `date +%H:%M:%S` : Finished backup $TODAY >> $FILE_LOG 2>&1
-#        touch $DIR_TODAY ;
-#    else
-#        rm -Rf $DIR_TODAY
-#        echo $TODAY `date +%H:%M:%S` : Error for backup $TODAY >> $FILE_LOG 2>&1
-#        exit 2
-#    fi
-
+        "$DIR_SOURCE"/ "$DIR_TODAY"/ >> "$FILE_LOG" 2>&1
+    then
+        echo "$TODAY $(date +%H:%M:%S) : ERROR during rsync, removing incomplete snapshot" >> "$FILE_LOG"
+        if [[ -n "$DIR_TODAY" && "$DIR_TODAY" == "$DIR_SNAPSHOT/"* ]]; then
+            rm -rf "$DIR_TODAY"
+        fi
+        exit 1
+    fi
 }
 
 create_backup
