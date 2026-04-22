@@ -278,21 +278,21 @@ class BackupTask:
         Returns:
             bool: True if both locations are reachable, otherwise False.
         """
-        source_ok = self._test_location(self._dir_source)
+        source_ok = self._test_location(self._dir_source, create_if_missing=False)
         if not source_ok:
             logger.error(f"Cannot reach back-up source '{self._dir_source}'")
-        dest_ok = self._test_location(self._dir_local)
+        dest_ok = self._test_location(self._dir_local, create_if_missing=True)
         if not dest_ok:
             logger.error(f"Cannot reach back-up local destination '{self._dir_local}'")
         return source_ok and dest_ok
 
     def _test_location_remote(self) -> bool:
-        reachable = self._test_location(self._dir_remote)
+        reachable = self._test_location(self._dir_remote, create_if_missing=True)
         if not reachable:
             logger.error(f"Cannot reach back-up remote destination '{self._dir_remote}'")
         return reachable
 
-    def _test_location(self, dir_location: str) -> bool:
+    def _test_location(self, dir_location: str, create_if_missing: bool = False) -> bool:
         """Check that the configured remote backup destination is reachable.
 
         This verifies that the remote host, SSH access, and destination
@@ -308,11 +308,20 @@ class BackupTask:
             )
         path = Path(dir_location)
         if not path.exists():
-            logger.warning(f"Local directory '{path}' does not exist, creating it")
-            path.mkdir(parents=True, exist_ok=True)
+            if create_if_missing:
+                try:
+                    logger.warning(f"Local directory '{path}' does not exist, creating it")
+                    path.mkdir(parents=True, exist_ok=True)
+                except PermissionError:
+                    logger.error(f"Permission denied creating directory '{path}'")
+                    return False
+            else:
+                logger.error(f"Local directory '{path}' does not exist")
+                return False
+
         return path.is_dir()
 
-    def _host_reachable(self, host: str, user: str, dir: str) -> bool:
+    def _host_reachable(self, host: str, user: str, dir: str, create_if_missing: bool) -> bool:
         """Check that a remote host, SSH access, and directory are all reachable.
 
         This pings the host, tests SSH login for the given user, and verifies
@@ -342,20 +351,23 @@ class BackupTask:
             ).returncode
             != 0
         ):
-            logger.warning(f"Directory '{dir}' not found on '{host}', creating it")
+            if create_if_missing:
+                logger.warning(f"Directory '{dir}' not found on '{host}', creating it")
 
-            mkdir_result = self._runner(
-                ["ssh", f"{user}@{host}", "mkdir", "-p", dir],
-                capture_output=True,
-                text=True,
-            )
-            if mkdir_result.returncode != 0:
-                logger.error(
-                    f"Failed to create directory '{dir}' on '{host}': {mkdir_result.stderr}"
+                mkdir_result = self._runner(
+                    ["ssh", f"{user}@{host}", "mkdir", "-p", dir],
+                    capture_output=True,
+                    text=True,
                 )
-                return False
+
+                if mkdir_result.returncode != 0:
+                    logger.error(
+                        f"Failed to create directory '{dir}' on '{host}': {mkdir_result.stderr}"
+                    )
+                    return False
             else:
-                logger.info(f"Created directory '{dir}' on '{host}'")
+                return False
+
         return True
 
     # ------------------------------------------------------------------

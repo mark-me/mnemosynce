@@ -102,7 +102,12 @@ def test_test_location_remote_ssh_login_fails(work_dir, src_dir, dst_dir, fake_r
 
 
 def test_test_location_remote_dir_missing(work_dir, src_dir, dst_dir, fake_runner_sequence):
-    runner = fake_runner_sequence([(0, ""), (0, ""), (1, "")])  # ping ok, login ok, dir missing
+    runner = fake_runner_sequence([
+        (0, ""),  # ping
+        (0, ""),  # ssh login
+        (1, ""),  # dir missing
+        (0, ""),  # mkdir succeeds
+    ])
     task = make_task(work_dir, src_dir, dst_dir, runner)
     assert task._test_location("user@host:/some/dir") is False
 
