@@ -8,7 +8,7 @@ DIR_SOURCE=$3;
 function create_backup(){
     FILE_EXCLUDES=excludes.lst;
     TODAY=$(date +%Y-%m-%d)
-    DIR_SNAPSHOT=$DIR_BACKUP/$NAME_SNAPSHOT;
+    DIR_SNAPSHOT="${DIR_BACKUP%/}/${NAME_SNAPSHOT}"
     DIR_LASTDAY=${DIR_SNAPSHOT}/$(ls ${DIR_SNAPSHOT} | tail -n 1)
     DIR_TODAY=${DIR_SNAPSHOT}/${TODAY}
     FILE_LOG=${NAME_SNAPSHOT}_backup.log
@@ -32,26 +32,22 @@ function create_backup(){
     #     exit 1
     # fi
 
-    if [[ ! -e ${DIR_TODAY} && ${DIR_LASTDAY} == ${DIR_SNAPSHOT}/ ]];
-    then
-        echo $TODAY `date +%H:%M:%S` : Create backup directory $TODAY >> $FILE_LOG ;
-        mkdir -p ${DIR_TODAY} >> $FILE_LOG
+    if [[ ! -e "$DIR_TODAY" && "$DIR_LASTDAY" == "$DIR_SNAPSHOT/" ]]; then
+        echo "$TODAY $(date +%H:%M:%S) : Create initial backup directory $DIR_TODAY" >> "$FILE_LOG"
+        mkdir -p "$DIR_TODAY" >> "$FILE_LOG" 2>&1
 
-    elif [[ ! -e ${DIR_TODAY} ]];
-    then
-        echo $TODAY `date +%H:%M:%S` : Move last day\'s directory $DIR_LASTDAY to $TODAY >> $FILE_LOG
-        mv $DIR_LASTDAY $DIR_TODAY  >> $FILE_LOG;
-        echo $TODAY `date +%H:%M:%S` : Copy all of $TODAY directory to $DIR_LASTDAY >> $FILE_LOG
-        cp -alp $DIR_TODAY $DIR_LASTDAY  >> $FILE_LOG
+    elif [[ ! -e "$DIR_TODAY" ]]; then
+        echo "$TODAY $(date +%H:%M:%S) : Creating snapshot from $DIR_LASTDAY to $DIR_TODAY" >> "$FILE_LOG"
+        cp -al "$DIR_LASTDAY" "$DIR_TODAY" >> "$FILE_LOG" 2>&1
+
     else
-        echo $TODAY `date +%H:%M:%S` : Back-up for $TODAY already exists, exiting >> $FILE_LOG 2>&1 ;
+        echo "$TODAY $(date +%H:%M:%S) : Backup for $TODAY already exists, continuing (rsync will update)" >> "$FILE_LOG"
     fi
 
     echo $TODAY `date +%H:%M:%S` : Starting backup for $TODAY >> $FILE_LOG 2>&1 ;
     echo "Running rsync from '$DIR_SOURCE' to '$DIR_TODAY'" >> $FILE_LOG
     rsync \
         -az --delete --delete-excluded \
-        --mkpath \
         --log-file="$FILE_LOG" \
         --numeric-ids \
         --exclude-from="$FILE_EXCLUDES" \
