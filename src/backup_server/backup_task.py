@@ -199,8 +199,8 @@ class BackupTask:
         self._status["steps"].append(
             {
                 "step": step_name,
-                "dir_from": dir_from,
-                "dir_to": dir_to,
+                "dir_from": self._ensure_dir_path(dir_from),
+                "dir_to": self._ensure_dir_path(dir_to) if dir_to else None,
                 "success": success,
                 "dt_start": start_time,
                 "dt_end": time.time(),
@@ -354,3 +354,7 @@ class BackupTask:
                 logger.error(line)
                 success = False
         return success
+
+    def _ensure_dir_path(self, path: str) -> str:
+        """Ensure rsync treats path as a directory."""
+        return path if path.endswith("/") else f"{path}/"
