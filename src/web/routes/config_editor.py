@@ -1,7 +1,6 @@
 """YAML configuration editor routes."""
 
 import logging
-
 import re
 from pathlib import Path
 
