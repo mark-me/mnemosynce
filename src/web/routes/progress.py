@@ -17,8 +17,8 @@ import time
 from flask import Blueprint, Response, render_template, stream_with_context
 
 from web.auth import login_required
-from web.setup_guard import setup_complete_required
 from web.run_state import state
+from web.setup_guard import setup_complete_required
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("progress", __name__, url_prefix="/progress")
