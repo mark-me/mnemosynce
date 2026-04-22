@@ -354,6 +354,8 @@ class BackupTask:
                     f"Failed to create directory '{dir}' on '{host}': {mkdir_result.stderr}"
                 )
                 return False
+            else:
+                logger.info(f"Created directory '{dir}' on '{host}'")
         return True
 
     # ------------------------------------------------------------------
