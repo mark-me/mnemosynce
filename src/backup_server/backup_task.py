@@ -139,7 +139,8 @@ class BackupTask:
             bool: True if the retention script completed successfully, otherwise False.
         """
         script = self._scripts_dir / "delete_old_backups.sh"
-        cmd = [str(script), self._name, self._dir_local]
+        file_log = self._work_dir / (self._name + "_remove_old.log")
+        cmd = [str(script), self._name, self._dir_local, str(file_log)]
         logger.info(f"Running command: {' '.join(cmd)}")
         return self._run_step(
             step_name="retention",
