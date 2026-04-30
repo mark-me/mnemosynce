@@ -10,7 +10,7 @@ mkdir -p "$DIR_SNAPSHOT"
 echo "===== Retention $NAME_SNAPSHOT $(date) =====" > "$FILE_LOG"
 
 list_all_dirs() {
-    find "$DIR_SNAPSHOT" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sed 's/[[:space:]]*$//'
+    find "$DIR_SNAPSHOT" -mindepth 1 -maxdepth 1 -type d | xargs -I{} basename {} | sed 's/[[:space:]]*$//'
 }
 
 ALL_DIRS=$(list_all_dirs)
