@@ -134,12 +134,18 @@ echo "Keeping:" >> "$FILE_LOG"
 cat "$KEEP_FILE" >> "$FILE_LOG"
 echo "Determining backups to delete..." >> "$FILE_LOG"
 
-echo "$ALL_DIRS" | grep -vxFf "$KEEP_FILE" | while read -r file_to_delete; do
-    echo "Removing $file_to_delete" >> "$FILE_LOG"
-    FULL_PATH="$DIR_SNAPSHOT/$file_to_delete"
-    if [[ -n "$file_to_delete" && -d "$FULL_PATH" && "$FULL_PATH" == "$DIR_SNAPSHOT/"* ]]; then
-        rm -rf -- "$FULL_PATH"
-    fi
-done
+TO_DELETE=$(echo "$ALL_DIRS" | { grep -vxFf "$KEEP_FILE" || true; })
+
+if [[ -z "$TO_DELETE" ]]; then
+    echo "Nothing to delete" >> "$FILE_LOG"
+else
+    echo "$TO_DELETE" | while read -r file_to_delete; do
+        echo "Removing $file_to_delete" >> "$FILE_LOG"
+        FULL_PATH="$DIR_SNAPSHOT/$file_to_delete"
+        if [[ -n "$file_to_delete" && -d "$FULL_PATH" && "$FULL_PATH" == "$DIR_SNAPSHOT/"* ]]; then
+            rm -rf -- "$FULL_PATH"
+        fi
+    done
+fi
 
 echo "Retention complete" >> "$FILE_LOG"
