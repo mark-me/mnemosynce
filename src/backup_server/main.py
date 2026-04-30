@@ -74,10 +74,13 @@ def main(
     with LogDB(cfg.DB_PATH) as log_db:
         lst_task_status = []
         for task_config in backup["tasks"]:
+            task_work_dir = Path(backup["dir_backup_local"].rstrip("/")) / task_config["name"]
+            task_work_dir.mkdir(parents=True, exist_ok=True)
             task = BackupTask(
                 task=task_config,
                 dir_local=backup["dir_backup_local"],
                 dir_remote=backup["dir_backup_remote"],
+                work_dir=task_work_dir,
             )
             status = task.start()
             log_db.add_task_run(status)
