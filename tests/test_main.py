@@ -62,7 +62,7 @@ def test_main_runs_without_real_secrets(minimal_config, tmp_path, fake_runner, m
 
     # Use a runner that makes all subprocess calls succeed
     monkeypatch.setattr(main_module, "BackupTask",
-        lambda task, dir_local, dir_remote: _FakeBackupTask(task))
+        lambda task, dir_local, dir_remote, **kwargs: _FakeBackupTask(task))
 
     main(
         file_config=str(minimal_config),
@@ -99,7 +99,7 @@ def test_password_reader_called_with_correct_env_var(minimal_config, monkeypatch
         def __init__(self, **kw): pass
         def send_mail(self, lst_task_status): pass
     monkeypatch.setattr(main_module, "EmailReport", _FakeEmail)
-    monkeypatch.setattr(main_module, "BackupTask", lambda **kw: _FakeBackupTask({"name": "t"}))
+    monkeypatch.setattr(main_module, "BackupTask", lambda **kw: _FakeBackupTask(kw["task"]))
 
     def capturing_reader(env_var):
         requested_vars.append(env_var)
