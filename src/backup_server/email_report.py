@@ -52,10 +52,18 @@ def enrich_task_status(lst_task_status: list, db_log: LogDB) -> list:
     return lst_task_status
 
 
+_SMTP_TIMEOUT_SECONDS = 30
+# Gmail's maximum message size is 25 MB. Stay well under it to avoid
+# timeouts mid-send caused by attaching a large, ever-growing log file.
+_MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
 def _smtp_send(sender: str, password: str, recipient: str, message_str: str) -> None:
     """Send an email via Gmail SMTP SSL. The default smtp_send implementation."""
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(host="smtp.gmail.com", port=465, context=context) as smtp:
+    with smtplib.SMTP_SSL(
+        host="smtp.gmail.com", port=465, context=context, timeout=_SMTP_TIMEOUT_SECONDS
+    ) as smtp:
         smtp.login(sender, password=password)
         smtp.sendmail(from_addr=sender, to_addrs=recipient, msg=message_str)
 
@@ -146,13 +154,22 @@ class EmailReport:
         return message
 
     def _add_attachment(self, message: MIMEMultipart, file: Path) -> None:
-        """Zip a file and attach it to the message.
+        """Zip a file and attach it to the message, skipping files that are too large.
 
         Args:
             message (MIMEMultipart): The message to attach to.
             file (Path): The file to zip and attach.
         """
         file = file.resolve()
+        if not file.exists():
+            logger.warning(f"Attachment '{file}' not found, skipping")
+            return
+        if file.stat().st_size > _MAX_ATTACHMENT_BYTES:
+            logger.warning(
+                f"Attachment '{file}' is {file.stat().st_size} bytes, "
+                f"exceeds {_MAX_ATTACHMENT_BYTES} byte limit — skipping"
+            )
+            return
         file_zip = file.parent / f"{file.stem}.zip"
         if file_zip.exists():
             file_zip.unlink()
