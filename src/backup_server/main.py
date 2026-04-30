@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -51,6 +52,26 @@ def delete_logs(lst_task_status: list) -> None:
             leftover.unlink()
 
 
+def _capture_run_log(log_path: Path, start_pos: int) -> Path:
+    """Extract log entries written since start_pos into a temporary file.
+
+    Returns a NamedTemporaryFile path containing only this run's log lines.
+    The caller is responsible for deleting it after the email is sent.
+    """
+    tmp = tempfile.NamedTemporaryFile(
+        mode="wb", suffix=".json", prefix="run_log_", delete=False
+    )
+    try:
+        with open(log_path, "rb") as f:
+            f.seek(start_pos)
+            tmp.write(f.read())
+    except OSError:
+        pass
+    finally:
+        tmp.close()
+    return Path(tmp.name)
+
+
 def main(
     file_config: str,
     password_reader: Callable[[str], str] = _read_password,
@@ -67,10 +88,16 @@ def main(
 
     gmail_password = password_reader("GMAIL_PASSWORD_FILE")
 
+    # Record the current end of the log file so we can later extract only the
+    # entries written during this run.
+    app_log_path = Path("log.json").resolve()
+    log_start_pos = app_log_path.stat().st_size if app_log_path.exists() else 0
+
     config = ConfigFile(file_config=file_config)
     backup = config.read()
     cfg = get_config()
 
+    run_log_path: Path | None = None
     with LogDB(cfg.DB_PATH) as log_db:
         lst_task_status = []
         for task_config in backup["tasks"]:
@@ -86,16 +113,20 @@ def main(
             log_db.add_task_run(status)
             lst_task_status.append(status)
 
+        run_log_path = _capture_run_log(app_log_path, log_start_pos)
         email = EmailReport(
             email_sender=backup["email_sender"],
             email_password=gmail_password,
             email_recipient=backup["email_report"],
             email_admin=backup["email_admin"],
             db_log=log_db,
+            app_log=run_log_path,
         )
         email.send_mail(lst_task_status=lst_task_status)
 
     delete_logs(lst_task_status=lst_task_status)
+    if run_log_path and run_log_path.exists():
+        run_log_path.unlink()
 
 
 if __name__ == "__main__":
