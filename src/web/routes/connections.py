@@ -6,11 +6,18 @@ import socket
 import ssl
 import subprocess
 from email.message import EmailMessage
+from pathlib import Path
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 
 from web.auth import login_required
 from web.setup_state import mark_connection_tested
+
+
+def _ssh_config_args() -> list[str]:
+    """Return [-F, <path>] args if the persisted ssh_config exists, else []."""
+    ssh_config = Path(current_app.config["SSH_KEY_DIR"]) / "ssh_config"
+    return ["-F", str(ssh_config)] if ssh_config.exists() else []
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("connections", __name__, url_prefix="/connections")
@@ -77,7 +84,7 @@ def _add_ssh_login_step(steps: list[dict], user: str, host: str) -> bool:
     connectivity, recording a human-readable outcome for the login step.
     """
     result = subprocess.run(
-        ["ssh", "-q", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", f"{user}@{host}", "exit"],
+        ["ssh", *_ssh_config_args(), "-q", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", f"{user}@{host}", "exit"],
         capture_output=True,
         text=True,
     )
@@ -101,6 +108,7 @@ def _add_remote_dir_step(steps: list[dict], user: str, host: str, path: str) -> 
     result = subprocess.run(
         [
             "ssh",
+            *_ssh_config_args(),
             "-q",
             "-o",
             "BatchMode=yes",
@@ -245,9 +253,60 @@ def test_ssh():
     return jsonify(result)
 
 
-@bp.route("/email", methods=["POST"])
+@bp.route("/trust-host-key", methods=["POST"])
 @login_required
-def test_email():
+def trust_host_key():
+    """Scan a remote host's public key and append it to known_hosts.
+
+    This runs ssh-keyscan against the given host and writes the result into
+    DATA_ROOT/ssh/known_hosts so that subsequent SSH connections from the
+    container can proceed without a host-key verification prompt.
+
+    Returns JSON with ``success`` (bool), ``host`` (str), and ``detail`` (str).
+    """
+    data = request.get_json(silent=True) or {}
+    host = data.get("host", "").strip()
+    if not host:
+        return jsonify({"success": False, "detail": "host is required"}), 400
+
+    ssh_dir: Path = current_app.config["SSH_KEY_DIR"]
+    ssh_dir.mkdir(parents=True, exist_ok=True)
+    known_hosts = ssh_dir / "known_hosts"
+
+    # Check whether a key for this host is already trusted.
+    if known_hosts.exists():
+        check = subprocess.run(
+            ["ssh-keygen", "-F", host, "-f", str(known_hosts)],
+            capture_output=True,
+            text=True,
+        )
+        if check.returncode == 0:
+            return jsonify({
+                "success": True,
+                "host": host,
+                "detail": f"Host '{host}' is already in known_hosts.",
+            })
+
+    result = subprocess.run(
+        ["ssh-keyscan", "-H", "-T", "5", host],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0 or not result.stdout.strip():
+        detail = result.stderr.strip() or f"ssh-keyscan returned no key for '{host}'"
+        logger.error("ssh-keyscan failed for '%s': %s", host, detail)
+        return jsonify({"success": False, "host": host, "detail": detail})
+
+    with open(known_hosts, "a", encoding="utf-8") as f:
+        f.write(result.stdout)
+
+    logger.info("Trusted host key for '%s' written to %s", host, known_hosts)
+    return jsonify({
+        "success": True,
+        "host": host,
+        "detail": f"Host key for '{host}' added to known_hosts.",
+    })
     """Handle an AJAX request to run email connection tests and return JSON.
 
     This reads Gmail credentials from configuration, validates the request

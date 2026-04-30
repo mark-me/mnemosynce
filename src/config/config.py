@@ -36,6 +36,8 @@ class BaseConfig:
     CONFIG_PATH: Path = DATA_ROOT / "backup_config.yml"
     DB_PATH: Path = DATA_ROOT / "log.db"
     SSH_KEY_DIR: Path = DATA_ROOT / "ssh"
+    KNOWN_HOSTS_PATH: Path = SSH_KEY_DIR / "known_hosts"
+    SSH_CONFIG_PATH: Path = SSH_KEY_DIR / "ssh_config"
 
     # --- Flask ---
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-change-in-production")
@@ -57,6 +59,15 @@ class BaseConfig:
         """
         cls.DATA_ROOT.mkdir(parents=True, exist_ok=True)
         cls.SSH_KEY_DIR.mkdir(parents=True, exist_ok=True)
+        # Write a persistent SSH client config so all SSH calls made by the
+        # application use the known_hosts file in the data volume rather than
+        # /root/.ssh/known_hosts, which is not persisted across container restarts.
+        cls.SSH_CONFIG_PATH.write_text(
+            f"Host *\n"
+            f"    UserKnownHostsFile {cls.KNOWN_HOSTS_PATH}\n"
+            f"    StrictHostKeyChecking yes\n",
+            encoding="utf-8",
+        )
 
 
 class DevelopmentConfig(BaseConfig):

@@ -108,6 +108,7 @@ def main(
                 dir_local=backup["dir_backup_local"],
                 dir_remote=backup["dir_backup_remote"],
                 work_dir=task_work_dir,
+                ssh_config_file=cfg.SSH_CONFIG_PATH,
             )
             status = task.start()
             log_db.add_task_run(status)

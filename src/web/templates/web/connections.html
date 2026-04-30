@@ -51,6 +51,34 @@
     </div>
   </div>
 
+  <!-- Trust host key -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-shield-check"></i>Trust Host Key
+      </div>
+      <div class="card-body">
+        <p class="text-body-secondary small">
+          Scans a remote host's public key and adds it to <code>known_hosts</code>
+          so SSH connections from the backup server are trusted automatically.
+          Run this once per host before testing the SSH connection.
+        </p>
+        <div class="mb-3">
+          <label class="form-label small mb-1">Host</label>
+          <input type="text" class="form-control form-control-sm"
+                 id="trust-host" placeholder="pibackup">
+        </div>
+        <button class="btn btn-warning btn-sm w-100" id="trust-btn"
+                onclick="runTrust()">
+          <i class="bi bi-shield-plus me-1"></i>Trust host key
+        </button>
+      </div>
+      <div class="card-footer bg-transparent" id="trust-results" style="display:none">
+        <div id="trust-steps"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Email test -->
   <div class="col-12 col-lg-6">
     <div class="card shadow-sm h-100">
@@ -86,6 +114,37 @@
 
 {% block extra_scripts %}
 <script>
+  async function runTrust() {
+    const host = document.getElementById("trust-host").value.trim();
+    if (!host) { alert("Host is required."); return; }
+
+    const btn = document.getElementById("trust-btn");
+    const stepsEl = document.getElementById("trust-steps");
+    const resultsEl = document.getElementById("trust-results");
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Scanning…';
+
+    try {
+      const resp = await fetch("{{ url_for('connections.trust_host_key') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ host }),
+      });
+      const data = await resp.json();
+      const icon = data.success
+        ? '<i class="bi bi-check-circle-fill text-success me-2"></i>'
+        : '<i class="bi bi-x-circle-fill text-danger me-2"></i>';
+      stepsEl.innerHTML = `<div class="step-result">${icon}${data.detail}</div>`;
+      resultsEl.style.display = "block";
+    } catch (err) {
+      alert("Request failed: " + err);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-shield-plus me-1"></i>Trust host key';
+    }
+  }
+
   function renderSteps(stepsEl, resultsEl, steps, errorMsg) {
     stepsEl.innerHTML = "";
     if (errorMsg) {

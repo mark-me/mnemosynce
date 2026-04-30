@@ -36,6 +36,7 @@ class BackupTask:
         dir_remote: str,
         work_dir: Path = None,
         runner: Runner = subprocess.run,
+        ssh_config_file: Path = None,
     ) -> None:
         """Construct a BackupTask from a task definition and backup locations.
 
@@ -52,6 +53,9 @@ class BackupTask:
                 resolved from the package directory (``_SCRIPTS_DIR``) regardless of
                 this value.
             runner (Runner): Callable used to execute shell commands, mainly for testing injection.
+            ssh_config_file (Path | None): Path to an SSH client config file passed via ``-F``.
+                When set, all ssh/ping host-reachability checks use this config, which
+                allows the persisted known_hosts in the data volume to be used.
         """
         self._name = task["name"]
         self._dir_source = task["dir_source"]
@@ -61,6 +65,7 @@ class BackupTask:
         self._scripts_dir = _SCRIPTS_DIR
         self._work_dir = work_dir or Path.cwd()
         self._runner = runner
+        self._ssh_config_file = ssh_config_file
         self._write_excludes(task.get("excludes", []))
 
     def _write_excludes(self, excludes: list) -> None:
@@ -139,8 +144,7 @@ class BackupTask:
             bool: True if the retention script completed successfully, otherwise False.
         """
         script = self._scripts_dir / "delete_old_backups.sh"
-        file_log = self._work_dir / (self._name + "_remove_old.log")
-        cmd = [str(script), self._name, self._dir_local, str(file_log)]
+        cmd = [str(script), self._name, self._dir_local]
         logger.info(f"Running command: {' '.join(cmd)}")
         return self._run_step(
             step_name="retention",
@@ -345,14 +349,14 @@ class BackupTask:
             logger.error(f"Cannot reach host '{host}'")
             return False
         if (
-            self._runner(["ssh", "-q", f"{user}@{host}", "exit"], capture_output=True).returncode
+            self._runner(self._ssh_cmd("-q", f"{user}@{host}", "exit"), capture_output=True).returncode
             != 0
         ):
             logger.error(f"Cannot ssh into server '{host}' for user '{user}'")
             return False
         if (
             self._runner(
-                ["ssh", f"{user}@{host}", "test", "-d", dir], capture_output=True
+                self._ssh_cmd(f"{user}@{host}", "test", "-d", dir), capture_output=True
             ).returncode
             != 0
         ):
@@ -360,7 +364,7 @@ class BackupTask:
                 logger.warning(f"Directory '{dir}' not found on '{host}', creating it")
 
                 mkdir_result = self._runner(
-                    ["ssh", f"{user}@{host}", "mkdir", "-p", dir],
+                    self._ssh_cmd(f"{user}@{host}", "mkdir", "-p", dir),
                     capture_output=True,
                     text=True,
                 )
@@ -378,6 +382,14 @@ class BackupTask:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _ssh_cmd(self, *args: str) -> list:
+        """Build an ssh command list, prepending -F <config> when configured."""
+        cmd = ["ssh"]
+        if self._ssh_config_file:
+            cmd += ["-F", str(self._ssh_config_file)]
+        cmd += list(args)
+        return cmd
 
     def _stderr_has_no_fatal_errors(self, stderr: str) -> bool:
         """Return True if every non-empty stderr line is a known ignorable warning."""
