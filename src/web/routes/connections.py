@@ -307,6 +307,11 @@ def trust_host_key():
         "host": host,
         "detail": f"Host key for '{host}' added to known_hosts.",
     })
+
+
+@bp.route("/email", methods=["POST"])
+@login_required
+def test_email():
     """Handle an AJAX request to run email connection tests and return JSON.
 
     This reads Gmail credentials from configuration, validates the request
