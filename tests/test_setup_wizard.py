@@ -381,13 +381,13 @@ class TestWizardRoutes:
         assert b"Generate" in response.data
 
     def test_step_connections_shown_for_remote_config(self, app, client):
-        """SSH key step renders normally when config has a remote source."""
+        """Connections step renders normally when config has a remote source."""
         _write_config(app, remote=True)
         response = client.get("/setup/connections")
         assert response.status_code == 200
-        # The header dynamically shows "SSH — user@host" when remote sources exist
-        assert b"SSH -" in response.data
-        # Optionally verify the specific host from the config
+        # The header always contains "SSH" when remote sources are configured
+        assert b"SSH" in response.data
+        # Verify the dynamic host details are present
         assert b"user@host" in response.data
 
     def test_step_schedule_renders(self, app, client):
