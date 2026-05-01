@@ -51,20 +51,22 @@ class BaseConfig:
     GMAIL_ADDRESS: str = os.getenv("GMAIL_ADDRESS", "")
     GMAIL_PASSWORD: str = os.getenv("GMAIL_PASSWORD", "")
 
-    @classmethod
-    def ensure_dirs(cls) -> None:
+    def ensure_dirs(self) -> None:
         """Create all required data directories if they do not exist.
 
         Call once at application startup before anything tries to write data.
         """
-        cls.DATA_ROOT.mkdir(parents=True, exist_ok=True)
-        cls.SSH_KEY_DIR.mkdir(parents=True, exist_ok=True)
-        # Write a persistent SSH client config so all SSH calls made by the
-        # application use the known_hosts file in the data volume rather than
-        # /root/.ssh/known_hosts, which is not persisted across container restarts.
-        cls.SSH_CONFIG_PATH.write_text(
+        self.SSH_KEY_DIR.mkdir(parents=True, exist_ok=True)
+        self.DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        # Derive paths from SSH_KEY_DIR at call time so that test fixtures
+        # which override SSH_KEY_DIR on the instance get the correct paths.
+        self.KNOWN_HOSTS_PATH = self.SSH_KEY_DIR / "known_hosts"
+        self.SSH_CONFIG_PATH = self.SSH_KEY_DIR / "ssh_config"
+        # Write a persistent SSH client config so all SSH calls use the
+        # known_hosts file in the data volume, not /root/.ssh/known_hosts.
+        self.SSH_CONFIG_PATH.write_text(
             f"Host *\n"
-            f"    UserKnownHostsFile {cls.KNOWN_HOSTS_PATH}\n"
+            f"    UserKnownHostsFile {self.KNOWN_HOSTS_PATH}\n"
             f"    StrictHostKeyChecking yes\n",
             encoding="utf-8",
         )
