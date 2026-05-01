@@ -27,7 +27,6 @@ import yaml
 from config.config import TestConfig
 from web.app import create_app
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -195,6 +194,7 @@ class TestGetSetupStatus:
         with app.test_request_context(environ_base={"HTTP_COOKIE": ""}):
             # Simulate the session flag being set
             from flask import session as flask_session
+
             from web.setup_state import get_setup_status
             # Use the client's session via a real request
         response = client.get("/setup/connections")
@@ -203,8 +203,9 @@ class TestGetSetupStatus:
             with c.session_transaction() as sess:
                 sess["setup_connection_tested"] = True
             with app.test_request_context():
-                from web.setup_state import _connection_tested
                 from flask import session
+
+                from web.setup_state import _connection_tested
                 session["setup_connection_tested"] = True
                 assert _connection_tested() is True
 
@@ -280,6 +281,7 @@ class TestIsSetupComplete:
         """mark_setup_complete() sets setup_explicitly_complete in the session."""
         with app.test_request_context():
             from flask import session
+
             from web.setup_state import mark_setup_complete
             mark_setup_complete()
             assert session.get("setup_explicitly_complete") is True
@@ -288,6 +290,7 @@ class TestIsSetupComplete:
         """mark_connection_tested() sets setup_connection_tested in the session."""
         with app.test_request_context():
             from flask import session
+
             from web.setup_state import mark_connection_tested
             mark_connection_tested()
             assert session.get("setup_connection_tested") is True
@@ -378,11 +381,14 @@ class TestWizardRoutes:
         assert b"Generate" in response.data
 
     def test_step_connections_shown_for_remote_config(self, app, client):
-        """Connections step renders normally when config has a remote source."""
+        """SSH key step renders normally when config has a remote source."""
         _write_config(app, remote=True)
         response = client.get("/setup/connections")
         assert response.status_code == 200
-        assert b"SSH Connection" in response.data
+        # The header dynamically shows "SSH — user@host" when remote sources exist
+        assert b"SSH -" in response.data
+        # Optionally verify the specific host from the config
+        assert b"user@host" in response.data
 
     def test_step_schedule_renders(self, app, client):
         """The schedule step page returns 200."""
