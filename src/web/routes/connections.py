@@ -309,6 +309,53 @@ def trust_host_key():
     })
 
 
+@bp.route("/copy-key", methods=["POST"])
+@login_required
+def copy_key():
+    """Copy the server's public SSH key to a remote host via ssh-copy-id.
+
+    Expects JSON with ``user``, ``host``, and ``key`` (the public key text).
+    Uses the persisted ssh_config so the known_hosts file is honoured.
+
+    Returns JSON with ``success`` (bool) and ``detail`` (str).
+    """
+    data = request.get_json(silent=True) or {}
+    user = data.get("user", "").strip()
+    host = data.get("host", "").strip()
+    key_text = data.get("key", "").strip()
+
+    if not user or not host or not key_text:
+        return jsonify({"success": False, "detail": "user, host, and key are required"}), 400
+
+    ssh_config_args = _ssh_config_args()
+
+    # Write the public key to a temp file and pass it to ssh-copy-id via -i
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".pub", delete=False) as tf:
+        tf.write(key_text + "\n")
+        tmp_pub = tf.name
+
+    try:
+        result = subprocess.run(
+            ["ssh-copy-id", *ssh_config_args, "-i", tmp_pub, f"{user}@{host}"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return jsonify({"success": False, "detail": f"Timed out connecting to {host}"})
+    finally:
+        Path(tmp_pub).unlink(missing_ok=True)
+
+    if result.returncode == 0:
+        logger.info("Copied public key to %s@%s", user, host)
+        return jsonify({"success": True, "detail": f"Public key copied to {user}@{host}."})
+    else:
+        detail = result.stderr.strip() or result.stdout.strip() or "ssh-copy-id failed"
+        logger.error("ssh-copy-id failed for %s@%s: %s", user, host, detail)
+        return jsonify({"success": False, "detail": detail})
+
+
 @bp.route("/email", methods=["POST"])
 @login_required
 def test_email():

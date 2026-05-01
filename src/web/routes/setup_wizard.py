@@ -24,7 +24,9 @@ the stepper header and suppresses the standard operations navbar.
 from __future__ import annotations
 
 import logging
+import re
 
+import yaml
 from flask import Blueprint, current_app, redirect, render_template, url_for
 
 from web.auth import login_required
@@ -32,6 +34,45 @@ from web.routes.config_editor import _config_path, _read_raw
 from web.routes.ssh_keys import _list_keys
 from web.scheduler import get_job_status, load_schedule
 from web.setup_state import get_setup_status, is_setup_complete, mark_setup_complete
+
+
+def _parse_remote_hosts() -> list[dict]:
+    """Return a list of remote hosts extracted from the current config file.
+
+    Each entry has ``user``, ``host``, and ``path`` keys, parsed from
+    ``user@host:/path`` style values found in ``dir_backup_remote`` and any
+    task ``dir_source`` fields that contain ``@``.
+
+    Duplicates (same user+host) are deduplicated, keeping the first path seen.
+    """
+    path = _config_path()
+    if not path.exists():
+        return []
+    try:
+        config = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return []
+
+    seen: set[tuple[str, str]] = set()
+    hosts: list[dict] = []
+
+    def _add(value: str) -> None:
+        if not value or "@" not in value:
+            return
+        # Match user@host:/path or user@host:path
+        m = re.match(r"^([^@]+)@([^:/]+):(.*)$", str(value).strip())
+        if not m:
+            return
+        user, host, path = m.group(1), m.group(2), m.group(3)
+        if (user, host) not in seen:
+            seen.add((user, host))
+            hosts.append({"user": user, "host": host, "path": path})
+
+    _add(config.get("dir_backup_remote", ""))
+    for task in config.get("tasks", []):
+        _add(task.get("dir_source", ""))
+
+    return hosts
 
 logger = logging.getLogger(__name__)
 
@@ -284,6 +325,11 @@ def step_connections():
 
     ctx = _step_context(status)
     ctx["next_url"] = _next_url(status, "connection")
+    ctx["remote_hosts"] = _parse_remote_hosts()
+    # Provide the first available public key so the template can offer
+    # ssh-copy-id without the user having to navigate away.
+    keys = _list_keys()
+    ctx["public_key"] = keys[0]["public_key"] if keys else None
     return render_template("web/wizard_connections.html", **ctx)
 
 
