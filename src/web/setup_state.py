@@ -167,6 +167,16 @@ def mark_connection_tested() -> None:
     session[_SESSION_CONN_KEY] = True
 
 
+def clear_connection_tested() -> None:
+    """Clear the connection-tested session flag.
+
+    Called when the config is saved with changed remote hosts, so the
+    wizard prompts the user to re-verify connections.  Must be called inside
+    an active Flask request context.
+    """
+    session.pop(_SESSION_CONN_KEY, None)
+
+
 def mark_setup_complete() -> None:
     """Set the explicit completion flag in the session.
 

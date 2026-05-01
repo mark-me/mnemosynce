@@ -17,6 +17,7 @@ from flask import (
 )
 
 from web.auth import login_required
+from web.setup_state import clear_connection_tested
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("config_editor", __name__, url_prefix="/config")
@@ -74,6 +75,28 @@ tasks:
 
 
 _REMOTE_RE = re.compile(r"^[^@]+@[^:]+:.+$")
+
+
+def _extract_remote_hosts(parsed: dict) -> set[str]:
+    """Return a set of 'user@host' strings from all remote locations in config.
+
+    Covers both ``dir_backup_remote`` and any remote ``dir_source`` in tasks.
+    Used to detect whether a save has changed which hosts need to be reachable.
+    """
+    hosts: set[str] = set()
+    for field in ("dir_backup_remote",):
+        value = str(parsed.get(field, ""))
+        m = re.match(r"^([^@]+@[^:/]+):", value)
+        if m:
+            hosts.add(m.group(1))
+    for task in parsed.get("tasks") or []:
+        if not isinstance(task, dict):
+            continue
+        source = str(task.get("dir_source", ""))
+        m = re.match(r"^([^@]+@[^:/]+):", source)
+        if m:
+            hosts.add(m.group(1))
+    return hosts
 
 
 def _check_local_paths(parsed: dict) -> list[str]:
@@ -191,16 +214,43 @@ def save():
             file_exists=_config_path().exists(),
             errors=errors,
         ), 422
-    _config_path().write_text(raw, encoding="utf-8")
+
+    # Snapshot remote hosts from the current config before overwriting it,
+    # so we can detect whether the save changes which hosts need to be reached.
+    old_hosts: set[str] = set()
+    config_path = _config_path()
+    if config_path.exists():
+        try:
+            old_parsed = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            if isinstance(old_parsed, dict):
+                old_hosts = _extract_remote_hosts(old_parsed)
+        except Exception:
+            pass
+
+    config_path.write_text(raw, encoding="utf-8")
     session.pop(_SESSION_KEY, None)
-    parsed = yaml.safe_load(raw)
-    path_warnings = _check_local_paths(parsed) if isinstance(parsed, dict) else []
+
+    new_parsed = yaml.safe_load(raw)
+    new_hosts = _extract_remote_hosts(new_parsed) if isinstance(new_parsed, dict) else set()
+    hosts_changed = new_hosts != old_hosts
+
+    path_warnings = _check_local_paths(new_parsed) if isinstance(new_parsed, dict) else []
     if path_warnings:
         for w in path_warnings:
             flash(w, "warning")
-        flash("Configuration saved — check the warnings above.", "success")
-    else:
-        flash("Configuration saved successfully.", "success")
+
+    if hosts_changed:
+        # Remote hosts changed — clear the connection flag so the wizard
+        # badge goes amber and redirect to the connections step with a nudge.
+        clear_connection_tested()
+        flash(
+            "Configuration saved — remote hosts have changed. "
+            "Please re-verify your connections below.",
+            "warning",
+        )
+        return redirect(url_for("setup.step_connections"))
+
+    flash("Configuration saved successfully.", "success")
     next_url = request.args.get("next") or url_for("config_editor.editor")
     return redirect(next_url)
 
