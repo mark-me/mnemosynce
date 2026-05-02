@@ -124,9 +124,9 @@ def _add_remote_dir_step(steps: list[dict], user: str, host: str, path: str) -> 
     dir_ok = result.returncode == 0
     steps.append(
         {
-            "label": f"Directory {path} exists",
+            "label": f"Directory {path}",
             "ok": dir_ok,
-            "detail": "" if dir_ok else f"Not found: {path}",
+            "detail": "exists" if dir_ok else "Not found — create it on the remote host first",
         }
     )
     return dir_ok
@@ -244,6 +244,11 @@ def test_ssh():
     user = data.get("user", "").strip()
     host = data.get("host", "").strip()
     path = data.get("path", "").strip()
+    # Strip any accidentally included user@host: prefix from the path field
+    # (e.g. if the user pasted a full remote spec like jan@pibackup:/some/dir)
+    if path and "@" in path and ":" in path:
+        colon_idx = path.index(":")
+        path = path[colon_idx + 1:]
     if not user or not host:
         return jsonify({"success": False, "steps": [], "error": "user and host are required"}), 400
     result = _test_ssh(user, host, path)
@@ -388,6 +393,48 @@ def copy_key():
     else:
         detail = result.stderr.strip() or result.stdout.strip() or "Failed to copy key"
         logger.error("Key copy failed for %s@%s: %s", user, host, detail)
+        return jsonify({"success": False, "detail": detail})
+
+
+@bp.route("/create-dir", methods=["POST"])
+@login_required
+def create_dir():
+    """Create a directory on a remote host via SSH mkdir -p.
+
+    Expects JSON with ``user``, ``host``, and ``path``.
+    Returns JSON with ``success`` (bool) and ``detail`` (str).
+    """
+    import shlex
+    data = request.get_json(silent=True) or {}
+    user = data.get("user", "").strip()
+    host = data.get("host", "").strip()
+    path = data.get("path", "").strip()
+
+    if not user or not host or not path:
+        return jsonify({"success": False, "detail": "user, host, and path are required"}), 400
+
+    ssh_dir = Path(current_app.config["DATA_ROOT"]) / "ssh"
+    known_hosts = ssh_dir / "known_hosts"
+    ssh_opts = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5"]
+    if known_hosts.exists():
+        ssh_opts += ["-o", f"UserKnownHostsFile={known_hosts}"]
+
+    try:
+        result = subprocess.run(
+            ["ssh", *ssh_opts, f"{user}@{host}", f"mkdir -p {shlex.quote(path)}"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return jsonify({"success": False, "detail": f"Timed out connecting to {host}"})
+
+    if result.returncode == 0:
+        logger.info("Created directory %s on %s@%s", path, user, host)
+        return jsonify({"success": True, "detail": f"Created {path} on {host}."})
+    else:
+        detail = result.stderr.strip() or "mkdir failed"
+        logger.error("mkdir failed for %s@%s:%s: %s", user, host, path, detail)
         return jsonify({"success": False, "detail": detail})
 
 

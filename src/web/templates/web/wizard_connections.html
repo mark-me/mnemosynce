@@ -189,7 +189,7 @@
   const nextUrl    = {{ (next_url | tojson) if next_url else "null" }};
   const publicKey  = {{ (public_key | tojson) if public_key else "null" }};
 
-  function renderSteps(stepsEl, resultsEl, steps, errorMsg) {
+  function renderSteps(stepsEl, resultsEl, steps, errorMsg, idx) {
     stepsEl.innerHTML = "";
     if (errorMsg) {
       stepsEl.innerHTML =
@@ -202,11 +202,37 @@
         const detail = step.detail
           ? `<div class="text-body-secondary small ms-4">${step.detail}</div>`
           : "";
+        // Offer a "Create directory" button when a remote dir check fails
+        const createBtn = (!step.ok && step.label && step.label.startsWith("Directory ") && idx != null)
+          ? `<button class="btn btn-outline-warning btn-sm ms-4 mt-1"
+                     onclick="createDir(${idx}, '${step.label.replace('Directory ', '')}')">
+               <i class="bi bi-folder-plus me-1"></i>Create directory
+             </button>`
+          : "";
         stepsEl.insertAdjacentHTML("beforeend",
-          `<div class="py-1">${icon}${step.label}${detail}</div>`);
+          `<div class="py-1">${icon}${step.label}${detail}${createBtn}</div>`);
       });
     }
     resultsEl.style.display = "block";
+  }
+
+  async function createDir(idx, path) {
+    const user = document.querySelector(`.ssh-user-${idx}`).value.trim();
+    const host = document.querySelector(`.ssh-host-${idx}`).value.trim();
+
+    const resp = await fetch("{{ url_for('connections.create_dir') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user, host, path }),
+    });
+    const data = await resp.json();
+    renderMessage(
+      document.getElementById(`ssh-steps-${idx}`),
+      document.getElementById(`ssh-results-${idx}`),
+      data.success, data.detail,
+    );
+    // Re-run the SSH test automatically so the user sees the updated state
+    if (data.success) setTimeout(() => runSshTest(idx), 500);
   }
 
   function renderMessage(stepsEl, resultsEl, ok, message) {
@@ -237,7 +263,7 @@
       renderSteps(
         document.getElementById(`ssh-steps-${idx}`),
         document.getElementById(`ssh-results-${idx}`),
-        data.steps || [], data.error || null,
+        data.steps || [], data.error || null, idx,
       );
       if (data.success && nextUrl) setTimeout(() => window.location.reload(), 800);
     } catch (err) {
