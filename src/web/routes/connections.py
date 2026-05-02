@@ -16,7 +16,7 @@ from web.setup_state import mark_connection_tested
 
 def _ssh_config_args() -> list[str]:
     """Return [-F, <path>] args if the persisted ssh_config exists, else []."""
-    ssh_config = Path(current_app.config["SSH_KEY_DIR"]) / "ssh_config"
+    ssh_config = Path(current_app.config["DATA_ROOT"]) / "ssh" / "ssh_config"
     return ["-F", str(ssh_config)] if ssh_config.exists() else []
 
 logger = logging.getLogger(__name__)
@@ -269,7 +269,7 @@ def trust_host_key():
     if not host:
         return jsonify({"success": False, "detail": "host is required"}), 400
 
-    ssh_dir: Path = current_app.config["SSH_KEY_DIR"]
+    ssh_dir = Path(current_app.config["DATA_ROOT"]) / "ssh"
     ssh_dir.mkdir(parents=True, exist_ok=True)
     known_hosts = ssh_dir / "known_hosts"
 
@@ -299,8 +299,12 @@ def trust_host_key():
         logger.error("ssh-keyscan failed for '%s': %s", host, detail)
         return jsonify({"success": False, "host": host, "detail": detail})
 
-    with open(known_hosts, "a", encoding="utf-8") as f:
-        f.write(scanned_keys + "\n")
+    try:
+        with open(known_hosts, "a", encoding="utf-8") as f:
+            f.write(scanned_keys + "\n")
+    except OSError as exc:
+        logger.error("Failed to write known_hosts at %s: %s", known_hosts, exc)
+        return jsonify({"success": False, "host": host, "detail": f"Could not write known_hosts: {exc}"})
 
     logger.info("Trusted host key for '%s' written to %s", host, known_hosts)
     return jsonify({
@@ -331,7 +335,7 @@ def copy_key():
     if not password:
         return jsonify({"success": False, "detail": "Password is required to install the key for the first time."}), 400
 
-    ssh_dir = Path(current_app.config["SSH_KEY_DIR"])
+    ssh_dir = Path(current_app.config["DATA_ROOT"]) / "ssh"
     known_hosts = ssh_dir / "known_hosts"
 
     if not known_hosts.exists():
