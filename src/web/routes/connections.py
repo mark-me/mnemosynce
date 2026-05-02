@@ -293,13 +293,14 @@ def trust_host_key():
         text=True,
     )
 
-    if result.returncode != 0 or not result.stdout.strip():
-        detail = result.stderr.strip() or f"ssh-keyscan returned no key for '{host}'"
+    scanned_keys = result.stdout.strip()
+    if not scanned_keys:
+        detail = result.stderr.strip() or f"ssh-keyscan returned no key for '{host}' — is the host reachable from the container?"
         logger.error("ssh-keyscan failed for '%s': %s", host, detail)
         return jsonify({"success": False, "host": host, "detail": detail})
 
     with open(known_hosts, "a", encoding="utf-8") as f:
-        f.write(result.stdout)
+        f.write(scanned_keys + "\n")
 
     logger.info("Trusted host key for '%s' written to %s", host, known_hosts)
     return jsonify({
