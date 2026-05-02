@@ -327,17 +327,29 @@ def copy_key():
     if not user or not host or not key_text:
         return jsonify({"success": False, "detail": "user, host, and key are required"}), 400
 
-    ssh_config_args = _ssh_config_args()
-
-    # Write the public key to a temp file and pass it to ssh-copy-id via -i
+    # ssh-copy-id -i <file> treats the argument as a private key path and
+    # appends .pub to find the public key.  So we must write a file WITHOUT
+    # a .pub suffix and put the public key content in it — ssh-copy-id will
+    # then read <file>.pub, which is exactly what we named it.
+    # We create a pair: <tmp> (empty placeholder) and <tmp>.pub (actual key).
     import tempfile
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".pub", delete=False) as tf:
-        tf.write(key_text + "\n")
-        tmp_pub = tf.name
+    with tempfile.NamedTemporaryFile(mode="w", suffix="", delete=False) as tf:
+        tmp_priv = tf.name  # placeholder private-key path
 
+    tmp_pub = Path(tmp_priv + ".pub")
     try:
+        tmp_pub.write_text(key_text + "\n", encoding="utf-8")
+
+        # ssh-copy-id doesn't accept -F for SSH config, so pass known_hosts
+        # via -o instead to honour the persisted known_hosts file.
+        ssh_dir = Path(current_app.config["SSH_KEY_DIR"])
+        known_hosts = ssh_dir / "known_hosts"
+        ssh_opts = []
+        if known_hosts.exists():
+            ssh_opts += ["-o", f"UserKnownHostsFile={known_hosts}"]
+
         result = subprocess.run(
-            ["ssh-copy-id", *ssh_config_args, "-i", tmp_pub, f"{user}@{host}"],
+            ["ssh-copy-id", *ssh_opts, "-i", tmp_priv, f"{user}@{host}"],
             capture_output=True,
             text=True,
             timeout=15,
@@ -345,7 +357,8 @@ def copy_key():
     except subprocess.TimeoutExpired:
         return jsonify({"success": False, "detail": f"Timed out connecting to {host}"})
     finally:
-        Path(tmp_pub).unlink(missing_ok=True)
+        Path(tmp_priv).unlink(missing_ok=True)
+        tmp_pub.unlink(missing_ok=True)
 
     if result.returncode == 0:
         logger.info("Copied public key to %s@%s", user, host)
