@@ -354,9 +354,10 @@ class BackupTask:
         ):
             logger.error(f"Cannot ssh into server '{host}' for user '{user}'")
             return False
+        import shlex
         if (
             self._runner(
-                self._ssh_cmd(f"{user}@{host}", "test", "-d", dir), capture_output=True
+                self._ssh_cmd(f"{user}@{host}", f"test -d {shlex.quote(dir)}"), capture_output=True
             ).returncode
             != 0
         ):
@@ -364,7 +365,7 @@ class BackupTask:
                 logger.warning(f"Directory '{dir}' not found on '{host}', creating it")
 
                 mkdir_result = self._runner(
-                    self._ssh_cmd(f"{user}@{host}", "mkdir", "-p", dir),
+                    self._ssh_cmd(f"{user}@{host}", f"mkdir -p {shlex.quote(dir)}"),
                     capture_output=True,
                     text=True,
                 )

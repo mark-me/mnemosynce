@@ -105,6 +105,7 @@ def _add_remote_dir_step(steps: list[dict], user: str, host: str, path: str) -> 
     This runs a remote ``test -d`` command over SSH and records whether the
     target directory is present, adding a human-readable step entry.
     """
+    import shlex
     result = subprocess.run(
         [
             "ssh",
@@ -115,9 +116,7 @@ def _add_remote_dir_step(steps: list[dict], user: str, host: str, path: str) -> 
             "-o",
             "ConnectTimeout=5",
             f"{user}@{host}",
-            "test",
-            "-d",
-            path,
+            f"test -d {shlex.quote(path)}",
         ],
         capture_output=True,
         text=True,
