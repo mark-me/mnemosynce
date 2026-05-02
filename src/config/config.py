@@ -82,16 +82,21 @@ class BaseConfig:
                 identity_lines += f"    IdentityFile {priv}\n"
 
         # Keys mounted into the container from the host (e.g. sops-nix secrets)
+        already_listed = {
+            Path(line.split()[-1])
+            for line in identity_lines.splitlines()
+            if line.strip().startswith("IdentityFile")
+        }
         for well_known in [
             Path("/root/.ssh/id_ed25519_backup"),
             Path("/root/.ssh/id_ed25519"),
             Path("/root/.ssh/id_rsa"),
         ]:
-            if well_known.exists() and well_known not in [
-                Path(line.split()[-1])
-                for line in identity_lines.splitlines()
-                if line.strip().startswith("IdentityFile")
-            ]:
+            try:
+                exists = well_known.exists()
+            except (PermissionError, OSError):
+                continue
+            if exists and well_known not in already_listed:
                 identity_lines += f"    IdentityFile {well_known}\n"
 
         (self.SSH_KEY_DIR / "ssh_config").write_text(
