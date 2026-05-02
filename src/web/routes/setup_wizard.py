@@ -330,6 +330,17 @@ def step_connections():
     # ssh-copy-id without the user having to navigate away.
     keys = _list_keys()
     ctx["public_key"] = keys[0]["public_key"] if keys else None
+    # Pre-fill the email test field with the report recipient from config.
+    try:
+        config_path = _config_path()
+        if config_path.exists():
+            import yaml
+            parsed = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+            ctx["email_report"] = parsed.get("email_report", "")
+        else:
+            ctx["email_report"] = ""
+    except Exception:
+        ctx["email_report"] = ""
     return render_template("web/wizard_connections.html", **ctx)
 
 

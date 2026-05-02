@@ -135,7 +135,9 @@
             Send to <span class="text-body-secondary">(leave blank to use sender)</span>
           </label>
           <input type="email" class="form-control form-control-sm"
-                 id="email-recipient" placeholder="you@example.com">
+                 id="email-recipient"
+                 value="{{ email_report }}"
+                 placeholder="you@example.com">
         </div>
         <button class="btn btn-success btn-sm w-100" id="email-btn" onclick="runEmailTest()">
           <i class="bi bi-play me-1"></i>Run test
