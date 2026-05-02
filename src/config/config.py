@@ -62,12 +62,28 @@ class BaseConfig:
         # which override SSH_KEY_DIR on the instance get the correct paths.
         self.KNOWN_HOSTS_PATH = self.SSH_KEY_DIR / "known_hosts"
         self.SSH_CONFIG_PATH = self.SSH_KEY_DIR / "ssh_config"
-        # Write a persistent SSH client config so all SSH calls use the
-        # known_hosts file in the data volume, not /root/.ssh/known_hosts.
-        self.SSH_CONFIG_PATH.write_text(
+        self._write_ssh_config()
+
+    def _write_ssh_config(self) -> None:
+        """Write the SSH client config file, listing all private keys in SSH_KEY_DIR.
+
+        Called at startup and whenever keys are added or removed, so that all
+        SSH connections made by the application automatically offer every known
+        identity without needing to pass -i explicitly.
+        """
+        known_hosts = self.SSH_KEY_DIR / "known_hosts"
+        identity_lines = ""
+        for pub in sorted(self.SSH_KEY_DIR.glob("*.pub")):
+            priv = pub.with_suffix("")
+            if priv.exists():
+                identity_lines += f"    IdentityFile {priv}\n"
+
+        (self.SSH_KEY_DIR / "ssh_config").write_text(
             f"Host *\n"
-            f"    UserKnownHostsFile {self.KNOWN_HOSTS_PATH}\n"
-            f"    StrictHostKeyChecking yes\n",
+            f"    UserKnownHostsFile {known_hosts}\n"
+            f"    StrictHostKeyChecking yes\n"
+            f"    IdentitiesOnly yes\n"
+            f"{identity_lines}",
             encoding="utf-8",
         )
 

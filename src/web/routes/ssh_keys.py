@@ -26,7 +26,7 @@ from flask import (
     url_for,
 )
 
-from web.auth import login_required
+from config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +107,9 @@ def generate():
     # Ensure private key is readable only by owner
     key_path.chmod(0o600)
 
+    # Regenerate ssh_config so the new key is offered for all SSH connections.
+    get_config()._write_ssh_config()
+
     flash(f"Key '{name}' generated successfully.", "success")
     next_url = request.args.get("next") or url_for("ssh_keys.index")
     return redirect(next_url)
@@ -128,6 +131,8 @@ def delete():
             deleted.append(path.name)
 
     if deleted:
+        # Regenerate ssh_config so the deleted key is no longer offered.
+        get_config()._write_ssh_config()
         flash(f"Deleted: {', '.join(deleted)}", "success")
     else:
         flash(f"No files found for key '{name}'.", "warning")
