@@ -323,49 +323,67 @@ def copy_key():
     user = data.get("user", "").strip()
     host = data.get("host", "").strip()
     key_text = data.get("key", "").strip()
+    password = data.get("password", "").strip()
 
     if not user or not host or not key_text:
         return jsonify({"success": False, "detail": "user, host, and key are required"}), 400
+    if not password:
+        return jsonify({"success": False, "detail": "Password is required to install the key for the first time."}), 400
 
-    # ssh-copy-id -i <file> treats the argument as a private key path and
-    # appends .pub to find the public key.  So we must write a file WITHOUT
-    # a .pub suffix and put the public key content in it — ssh-copy-id will
-    # then read <file>.pub, which is exactly what we named it.
-    # We create a pair: <tmp> (empty placeholder) and <tmp>.pub (actual key).
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode="w", suffix="", delete=False) as tf:
-        tmp_priv = tf.name  # placeholder private-key path
+    ssh_dir = Path(current_app.config["SSH_KEY_DIR"])
+    known_hosts = ssh_dir / "known_hosts"
 
-    tmp_pub = Path(tmp_priv + ".pub")
+    if not known_hosts.exists():
+        return jsonify({
+            "success": False,
+            "detail": f"Host '{host}' is not yet trusted. Use 'Trust host key' first.",
+        })
+    check = subprocess.run(
+        ["ssh-keygen", "-F", host, "-f", str(known_hosts)],
+        capture_output=True,
+    )
+    if check.returncode != 0:
+        return jsonify({
+            "success": False,
+            "detail": f"Host '{host}' is not yet trusted. Use 'Trust host key' first.",
+        })
+
+    ssh_opts = [
+        "-o", f"UserKnownHostsFile={known_hosts}",
+        "-o", "StrictHostKeyChecking=yes",
+        "-o", "BatchMode=no",
+    ]
+    safe_key = key_text.replace("'", "'\\''")
+    remote_cmd = (
+        "mkdir -p ~/.ssh && chmod 700 ~/.ssh && "
+        f"grep -qxF '{safe_key}' ~/.ssh/authorized_keys 2>/dev/null || "
+        f"echo '{safe_key}' >> ~/.ssh/authorized_keys && "
+        "chmod 600 ~/.ssh/authorized_keys"
+    )
+
+    import os
+    env = {**os.environ, "SSHPASS": password}
     try:
-        tmp_pub.write_text(key_text + "\n", encoding="utf-8")
-
-        # ssh-copy-id doesn't accept -F for SSH config, so pass known_hosts
-        # via -o instead to honour the persisted known_hosts file.
-        ssh_dir = Path(current_app.config["SSH_KEY_DIR"])
-        known_hosts = ssh_dir / "known_hosts"
-        ssh_opts = []
-        if known_hosts.exists():
-            ssh_opts += ["-o", f"UserKnownHostsFile={known_hosts}"]
-
         result = subprocess.run(
-            ["ssh-copy-id", *ssh_opts, "-i", tmp_priv, f"{user}@{host}"],
+            ["sshpass", "-e", "ssh", *ssh_opts, f"{user}@{host}", remote_cmd],
             capture_output=True,
             text=True,
             timeout=15,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         return jsonify({"success": False, "detail": f"Timed out connecting to {host}"})
+    except FileNotFoundError:
+        return jsonify({"success": False, "detail": "sshpass is not installed in the container."})
     finally:
-        Path(tmp_priv).unlink(missing_ok=True)
-        tmp_pub.unlink(missing_ok=True)
+        password = ""  # don't keep it in memory longer than needed
 
     if result.returncode == 0:
         logger.info("Copied public key to %s@%s", user, host)
-        return jsonify({"success": True, "detail": f"Public key copied to {user}@{host}."})
+        return jsonify({"success": True, "detail": f"Public key added to {user}@{host}:~/.ssh/authorized_keys."})
     else:
-        detail = result.stderr.strip() or result.stdout.strip() or "ssh-copy-id failed"
-        logger.error("ssh-copy-id failed for %s@%s: %s", user, host, detail)
+        detail = result.stderr.strip() or result.stdout.strip() or "Failed to copy key"
+        logger.error("Key copy failed for %s@%s: %s", user, host, detail)
         return jsonify({"success": False, "detail": detail})
 
 

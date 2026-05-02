@@ -12,7 +12,7 @@ ENV APP_VERSION=${APP_VERSION} \
 #   bash    — the shell scripts require bash, not just sh
 #   rsync   — used by backup.sh and sync_backup_to_remote.sh
 #   openssh — ssh and ssh-keygen for key management and remote checks
-RUN apk add --no-cache bash rsync openssh-client
+RUN apk add --no-cache bash rsync openssh-client sshpass
 
 WORKDIR /app
 

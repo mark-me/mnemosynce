@@ -66,12 +66,30 @@
             {% if public_key %}
             <button class="btn btn-outline-secondary btn-sm"
                     id="copy-btn-{{ loop.index }}"
-                    title="Copy public key to this host"
-                    onclick="copyKey({{ loop.index }})">
+                    title="Trust host key first, then copy the public key to this host"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#copy-form-{{ loop.index }}">
               <i class="bi bi-key me-1"></i>Copy key
             </button>
             {% endif %}
           </div>
+          {% if public_key %}
+          <div class="collapse mt-2" id="copy-form-{{ loop.index }}">
+            <div class="input-group input-group-sm">
+              <input type="password"
+                     class="form-control form-control-sm copy-password-{{ loop.index }}"
+                     placeholder="Remote password">
+              <button class="btn btn-warning btn-sm"
+                      id="copy-submit-{{ loop.index }}"
+                      onclick="copyKey({{ loop.index }})">
+                Install
+              </button>
+            </div>
+            <div class="form-text small text-body-secondary">
+              Used once to install the key. Never stored.
+            </div>
+          </div>
+          {% endif %}
         </div>
         <div class="card-footer bg-transparent" id="ssh-results-{{ loop.index }}" style="display:none">
           <div id="ssh-steps-{{ loop.index }}"></div>
@@ -234,29 +252,39 @@
     if (!publicKey) { alert("No public key found. Generate one in the SSH Keys step first."); return; }
     const user = document.querySelector(`.ssh-user-${idx}`).value.trim();
     const host = document.querySelector(`.ssh-host-${idx}`).value.trim();
+    const passwordEl = document.querySelector(`.copy-password-${idx}`);
+    const password = passwordEl ? passwordEl.value : "";
     if (!user || !host) { alert("User and Host are required."); return; }
+    if (!password) { alert("Enter the remote password to install the key."); return; }
 
-    const btn = document.getElementById(`copy-btn-${idx}`);
+    const btn = document.getElementById(`copy-submit-${idx}`);
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Copying…';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Installing…';
 
     try {
       const resp = await fetch("{{ url_for('connections.copy_key') }}", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user, host, key: publicKey }),
+        body: JSON.stringify({ user, host, key: publicKey, password }),
       });
       const data = await resp.json();
+      if (passwordEl) passwordEl.value = "";  // clear immediately after send
       renderMessage(
         document.getElementById(`ssh-steps-${idx}`),
         document.getElementById(`ssh-results-${idx}`),
         data.success, data.detail,
       );
+      if (data.success) {
+        // Collapse the password form on success
+        const collapse = document.getElementById(`copy-form-${idx}`);
+        if (collapse) bootstrap.Collapse.getInstance(collapse)?.hide();
+      }
     } catch (err) {
+      if (passwordEl) passwordEl.value = "";
       alert("Request failed: " + err);
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-key me-1"></i>Copy key';
+      btn.innerHTML = "Install";
     }
   }
 
