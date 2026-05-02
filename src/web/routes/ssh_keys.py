@@ -27,6 +27,7 @@ from flask import (
 )
 
 from config import get_config
+from web.auth import login_required
 
 logger = logging.getLogger(__name__)
 
