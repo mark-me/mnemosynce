@@ -65,7 +65,8 @@ class BaseConfig:
         self._write_ssh_config()
 
     def _write_ssh_config(self) -> None:
-        """Write the SSH client config file, listing all private keys in SSH_KEY_DIR.
+        """Write the SSH client config file, listing all private keys in SSH_KEY_DIR
+        and any well-known mounted keys (e.g. keys written by sops-nix at boot).
 
         Called at startup and whenever keys are added or removed, so that all
         SSH connections made by the application automatically offer every known
@@ -73,10 +74,25 @@ class BaseConfig:
         """
         known_hosts = self.SSH_KEY_DIR / "known_hosts"
         identity_lines = ""
+
+        # Keys managed by the application in the data volume
         for pub in sorted(self.SSH_KEY_DIR.glob("*.pub")):
             priv = pub.with_suffix("")
             if priv.exists():
                 identity_lines += f"    IdentityFile {priv}\n"
+
+        # Keys mounted into the container from the host (e.g. sops-nix secrets)
+        for well_known in [
+            Path("/root/.ssh/id_ed25519_backup"),
+            Path("/root/.ssh/id_ed25519"),
+            Path("/root/.ssh/id_rsa"),
+        ]:
+            if well_known.exists() and well_known not in [
+                Path(line.split()[-1])
+                for line in identity_lines.splitlines()
+                if line.strip().startswith("IdentityFile")
+            ]:
+                identity_lines += f"    IdentityFile {well_known}\n"
 
         (self.SSH_KEY_DIR / "ssh_config").write_text(
             f"Host *\n"

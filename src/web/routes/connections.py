@@ -413,11 +413,7 @@ def create_dir():
     if not user or not host or not path:
         return jsonify({"success": False, "detail": "user, host, and path are required"}), 400
 
-    ssh_dir = Path(current_app.config["DATA_ROOT"]) / "ssh"
-    known_hosts = ssh_dir / "known_hosts"
-    ssh_opts = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5"]
-    if known_hosts.exists():
-        ssh_opts += ["-o", f"UserKnownHostsFile={known_hosts}"]
+    ssh_opts = [*_ssh_config_args(), "-o", "BatchMode=yes", "-o", "ConnectTimeout=5"]
 
     try:
         result = subprocess.run(
