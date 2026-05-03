@@ -174,7 +174,11 @@ def test_start_stops_early_when_local_dirs_unreachable(work_dir, tmp_path, fake_
     )
     status = task.start()
     assert status["success"] is False
-    assert status["steps"] == []  # no steps were attempted
+    # All three steps are recorded as skipped so the failure appears in run history
+    assert len(status["steps"]) == 3
+    assert all(not s["success"] for s in status["steps"])
+    assert all(s.get("skipped") for s in status["steps"])
+    assert [s["step"] for s in status["steps"]] == ["backup", "retention", "sync"]
 
 
 def test_start_stops_after_backup_failure(work_dir, src_dir, dst_dir, fake_runner_sequence):
@@ -185,5 +189,12 @@ def test_start_stops_after_backup_failure(work_dir, src_dir, dst_dir, fake_runne
     task._test_locations_local = lambda: True
     status = task.start()
     assert status["success"] is False
-    assert len(status["steps"]) == 1
+    # The failed backup step plus two skipped steps are all recorded
+    assert len(status["steps"]) == 3
     assert status["steps"][0]["step"] == "backup"
+    assert status["steps"][0]["success"] is False
+    assert not status["steps"][0].get("skipped")   # backup actually ran and failed
+    assert status["steps"][1]["step"] == "retention"
+    assert status["steps"][1].get("skipped")        # retention was skipped
+    assert status["steps"][2]["step"] == "sync"
+    assert status["steps"][2].get("skipped")        # sync was skipped
