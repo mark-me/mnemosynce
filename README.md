@@ -6,7 +6,7 @@ A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mn
 
 *Ancient memory meets modern sync*
 
-![Mnemosynce Logo](assets/images/modern-mnemosyne-wide.png)
+![Mnemosynce Logo](assets/images/banner.png)
 
 ## ✨ Features
 
