@@ -6,21 +6,11 @@
   <h2 class="h5 mb-0"><i class="bi bi-wifi me-2 text-success"></i>Test Connections</h2>
 </div>
 <p class="text-body-secondary small mb-3">
-  Verify that the backup server can reach its sources and email provider.
-  Run at least one successful test to unlock the next step.
+  Verify that the backup server can reach every remote host and your email
+  provider. All cards must pass before you can continue.
 </p>
 
-{% if setup_status.connection %}
-<div class="alert alert-success py-2 mb-3 d-flex align-items-center gap-2">
-  <i class="bi bi-check-circle-fill"></i>
-  <span class="small">Connection test passed — you can continue to the next step.</span>
-  {% if next_url %}
-    <a href="{{ next_url }}" class="btn btn-sm btn-success ms-auto">
-      Next <i class="bi bi-arrow-right ms-1"></i>
-    </a>
-  {% endif %}
-</div>
-{% endif %}
+{# Overall status banner — hidden until JS updates it #}
 
 <div class="row g-3">
 
@@ -30,9 +20,10 @@
   {% if remote_hosts %}
     {% for rh in remote_hosts %}
     <div class="col-12 col-lg-6">
-      <div class="card shadow-sm h-100">
+      <div class="card shadow-sm h-100" id="card-ssh-{{ loop.index }}">
         <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
           <i class="bi bi-terminal"></i>SSH — {{ rh.user }}@{{ rh.host }}
+          <span class="ms-auto badge bg-secondary" id="badge-ssh-{{ loop.index }}">Not tested</span>
         </div>
         <div class="card-body">
           <p class="text-body-secondary small mb-3">
@@ -98,11 +89,11 @@
     </div>
     {% endfor %}
   {% else %}
-    {# Fallback: no remote hosts in config — show a blank manual form #}
     <div class="col-12 col-lg-6">
-      <div class="card shadow-sm h-100">
+      <div class="card shadow-sm h-100" id="card-ssh-1">
         <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
           <i class="bi bi-terminal"></i>SSH Connection
+          <span class="ms-auto badge bg-secondary" id="badge-ssh-1">Not tested</span>
         </div>
         <div class="card-body">
           <p class="text-body-secondary small mb-3">
@@ -139,9 +130,10 @@
   {# Email test                                                          #}
   {# ------------------------------------------------------------------ #}
   <div class="col-12 col-lg-6">
-    <div class="card shadow-sm h-100">
+    <div class="card shadow-sm h-100" id="card-email">
       <div class="card-header d-flex align-items-center gap-2 small fw-semibold">
         <i class="bi bi-envelope"></i>Email (Gmail SMTP)
+        <span class="ms-auto badge bg-secondary" id="badge-email">Not tested</span>
       </div>
       <div class="card-body">
         <p class="text-body-secondary small mb-3">
@@ -169,7 +161,16 @@
 
 </div>
 
-<div class="d-flex justify-content-between align-items-center mt-3">
+<div id="overall-banner" class="mb-3 mt-3" style="display:none"></div>
+
+{% if setup_status.connection %}
+<p class="text-body-secondary small mt-2 mb-2">
+  <i class="bi bi-info-circle me-1"></i>
+  A test was passed in a previous session. Run the tests above to re-verify all connections before continuing.
+</p>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mt-2">
   <a href="{{ url_for('setup.step_ssh_keys') }}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-arrow-left me-1"></i>Back
   </a>
@@ -186,8 +187,63 @@
 
 {% block extra_scripts %}
 <script>
-  const nextUrl    = {{ (next_url | tojson) if next_url else "null" }};
-  const publicKey  = {{ (public_key | tojson) if public_key else "null" }};
+  const nextUrl   = {{ (next_url | tojson) if next_url else "null" }};
+  const publicKey = {{ (public_key | tojson) if public_key else "null" }};
+
+  // Track pass/fail for every card. null = not yet tested.
+  const cardState = {};
+  const sshCardCount = {{ remote_hosts | length if remote_hosts else 1 }};
+  for (let i = 1; i <= sshCardCount; i++) cardState[`ssh-${i}`] = null;
+  cardState["email"] = null;
+
+  function setCardBadge(badgeId, success) {
+    const badge = document.getElementById(badgeId);
+    if (!badge) return;
+    if (success === null) {
+      badge.textContent = "Not tested";
+      badge.className   = "ms-auto badge bg-secondary";
+    } else {
+      badge.textContent = success ? "Passed" : "Failed";
+      badge.className   = `ms-auto badge ${success ? "bg-success" : "bg-danger"}`;
+    }
+  }
+
+  function updateOverallBanner() {
+    const states  = Object.values(cardState);
+    const allDone = states.every(s => s !== null);
+    const allPass = states.every(s => s === true);
+    const banner  = document.getElementById("overall-banner");
+    const nextBtn = document.getElementById("next-btn");
+
+    if (!allDone) {
+      banner.style.display = "none";
+      return;
+    }
+
+    banner.style.display = "block";
+
+    if (allPass) {
+      banner.innerHTML = `
+        <div class="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
+          <i class="bi bi-check-circle-fill"></i>
+          <span class="small">All connection tests passed — you're good to continue.</span>
+          ${nextUrl ? `<a href="${nextUrl}" class="btn btn-sm btn-success ms-auto">Next <i class="bi bi-arrow-right ms-1"></i></a>` : ""}
+        </div>`;
+      if (nextBtn) {
+        nextBtn.textContent = "Next ";
+        nextBtn.insertAdjacentHTML("beforeend", '<i class="bi bi-arrow-right ms-1"></i>');
+        nextBtn.classList.remove("btn-outline-secondary");
+        nextBtn.classList.add("btn-primary");
+      }
+    } else {
+      const failCount = states.filter(s => s === false).length;
+      banner.innerHTML = `
+        <div class="alert alert-warning py-2 d-flex align-items-center gap-2 mb-0">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span class="small">${failCount} test${failCount > 1 ? "s" : ""} failed — fix the issues above and re-run.</span>
+        </div>`;
+    }
+  }
 
   function renderSteps(stepsEl, resultsEl, steps, errorMsg, idx) {
     stepsEl.innerHTML = "";
@@ -196,13 +252,12 @@
         `<div class="text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>${errorMsg}</div>`;
     } else {
       steps.forEach(step => {
-        const icon   = step.ok
+        const icon = step.ok
           ? '<i class="bi bi-check-circle-fill text-success me-2"></i>'
           : '<i class="bi bi-x-circle-fill text-danger me-2"></i>';
         const detail = step.detail
           ? `<div class="text-body-secondary small ms-4">${step.detail}</div>`
           : "";
-        // Offer a "Create directory" button when a remote dir check fails
         const createBtn = (!step.ok && step.label && step.label.startsWith("Directory ") && idx != null)
           ? `<button class="btn btn-outline-warning btn-sm ms-4 mt-1"
                      onclick="createDir(${idx}, '${step.label.replace('Directory ', '')}')">
@@ -214,25 +269,6 @@
       });
     }
     resultsEl.style.display = "block";
-  }
-
-  async function createDir(idx, path) {
-    const user = document.querySelector(`.ssh-user-${idx}`).value.trim();
-    const host = document.querySelector(`.ssh-host-${idx}`).value.trim();
-
-    const resp = await fetch("{{ url_for('connections.create_dir') }}", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user, host, path }),
-    });
-    const data = await resp.json();
-    renderMessage(
-      document.getElementById(`ssh-steps-${idx}`),
-      document.getElementById(`ssh-results-${idx}`),
-      data.success, data.detail,
-    );
-    // Re-run the SSH test automatically so the user sees the updated state
-    if (data.success) setTimeout(() => runSshTest(idx), 500);
   }
 
   function renderMessage(stepsEl, resultsEl, ok, message) {
@@ -249,9 +285,12 @@
     const path = document.querySelector(`.ssh-path-${idx}`).value.trim();
     if (!user || !host) { alert("User and Host are required."); return; }
 
-    const btn = document.getElementById(`ssh-btn-${idx}`);
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testing…';
+    const btn   = document.getElementById(`ssh-btn-${idx}`);
+    const badge = document.getElementById(`badge-ssh-${idx}`);
+    btn.disabled      = true;
+    btn.innerHTML     = '<span class="spinner-border spinner-border-sm me-1"></span>Testing…';
+    badge.textContent = "Testing…";
+    badge.className   = "ms-auto badge bg-secondary";
 
     try {
       const resp = await fetch("{{ url_for('connections.test_ssh') }}", {
@@ -265,26 +304,48 @@
         document.getElementById(`ssh-results-${idx}`),
         data.steps || [], data.error || null, idx,
       );
-      if (data.success && nextUrl) setTimeout(() => window.location.reload(), 800);
+      cardState[`ssh-${idx}`] = !!data.success;
+      setCardBadge(`badge-ssh-${idx}`, data.success);
+      updateOverallBanner();
     } catch (err) {
+      cardState[`ssh-${idx}`] = false;
+      setCardBadge(`badge-ssh-${idx}`, false);
+      updateOverallBanner();
       alert("Request failed: " + err);
     } finally {
-      btn.disabled = false;
+      btn.disabled  = false;
       btn.innerHTML = '<i class="bi bi-play me-1"></i>Run test';
     }
   }
 
-  async function copyKey(idx) {
-    if (!publicKey) { alert("No public key found. Generate one in the SSH Keys step first."); return; }
+  async function createDir(idx, path) {
     const user = document.querySelector(`.ssh-user-${idx}`).value.trim();
     const host = document.querySelector(`.ssh-host-${idx}`).value.trim();
+    const resp = await fetch("{{ url_for('connections.create_dir') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user, host, path }),
+    });
+    const data = await resp.json();
+    renderMessage(
+      document.getElementById(`ssh-steps-${idx}`),
+      document.getElementById(`ssh-results-${idx}`),
+      data.success, data.detail,
+    );
+    if (data.success) setTimeout(() => runSshTest(idx), 500);
+  }
+
+  async function copyKey(idx) {
+    if (!publicKey) { alert("No public key found. Generate one in the SSH Keys step first."); return; }
+    const user       = document.querySelector(`.ssh-user-${idx}`).value.trim();
+    const host       = document.querySelector(`.ssh-host-${idx}`).value.trim();
     const passwordEl = document.querySelector(`.copy-password-${idx}`);
-    const password = passwordEl ? passwordEl.value : "";
+    const password   = passwordEl ? passwordEl.value : "";
     if (!user || !host) { alert("User and Host are required."); return; }
-    if (!password) { alert("Enter the remote password to install the key."); return; }
+    if (!password)      { alert("Enter the remote password to install the key."); return; }
 
     const btn = document.getElementById(`copy-submit-${idx}`);
-    btn.disabled = true;
+    btn.disabled  = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Installing…';
 
     try {
@@ -294,14 +355,13 @@
         body: JSON.stringify({ user, host, key: publicKey, password }),
       });
       const data = await resp.json();
-      if (passwordEl) passwordEl.value = "";  // clear immediately after send
+      if (passwordEl) passwordEl.value = "";
       renderMessage(
         document.getElementById(`ssh-steps-${idx}`),
         document.getElementById(`ssh-results-${idx}`),
         data.success, data.detail,
       );
       if (data.success) {
-        // Collapse the password form on success
         const collapse = document.getElementById(`copy-form-${idx}`);
         if (collapse) bootstrap.Collapse.getInstance(collapse)?.hide();
       }
@@ -309,16 +369,19 @@
       if (passwordEl) passwordEl.value = "";
       alert("Request failed: " + err);
     } finally {
-      btn.disabled = false;
+      btn.disabled  = false;
       btn.innerHTML = "Install";
     }
   }
 
   async function runEmailTest() {
     const recipient = document.getElementById("email-recipient").value.trim();
-    const btn = document.getElementById("email-btn");
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testing…';
+    const btn       = document.getElementById("email-btn");
+    const badge     = document.getElementById("badge-email");
+    btn.disabled      = true;
+    btn.innerHTML     = '<span class="spinner-border spinner-border-sm me-1"></span>Testing…';
+    badge.textContent = "Testing…";
+    badge.className   = "ms-auto badge bg-secondary";
 
     try {
       const resp = await fetch("{{ url_for('connections.test_email') }}", {
@@ -332,11 +395,16 @@
         document.getElementById("email-results"),
         data.steps || [], data.error || null,
       );
-      if (data.success && nextUrl) setTimeout(() => window.location.reload(), 800);
+      cardState["email"] = !!data.success;
+      setCardBadge("badge-email", data.success);
+      updateOverallBanner();
     } catch (err) {
+      cardState["email"] = false;
+      setCardBadge("badge-email", false);
+      updateOverallBanner();
       alert("Request failed: " + err);
     } finally {
-      btn.disabled = false;
+      btn.disabled  = false;
       btn.innerHTML = '<i class="bi bi-play me-1"></i>Run test';
     }
   }
