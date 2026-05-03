@@ -224,16 +224,17 @@ def _index_steps_by_run(step_rows: list[sqlite3.Row]) -> dict[tuple[object, obje
     """
     steps_by_run: dict[tuple[object, object], list[dict]] = {}
     for s in step_rows:
-        key = (s["id_task"], s["dt_task_start"])
+        row = dict(s)
+        key = (row["id_task"], row["dt_task_start"])
         steps_by_run.setdefault(key, []).append(
             {
-                "step": s["id_step"],
-                "success": bool(s["success_step"]),
-                "started": _ts(s["dt_step_start"]),
-                "elapsed": s["time_elapsed"] or "—",
-                "dir_from": s["dir_from"] or "—",
-                "dir_to": s["dir_to"] or "—",
-                "skip_reason": s["skip_reason"] or None,
+                "step": row["id_step"],
+                "success": bool(row["success_step"]),
+                "started": _ts(row["dt_step_start"]),
+                "elapsed": row["time_elapsed"] or "—",
+                "dir_from": row["dir_from"] or "—",
+                "dir_to": row["dir_to"] or "—",
+                "skip_reason": row.get("skip_reason") or None,
             }
         )
     return steps_by_run
