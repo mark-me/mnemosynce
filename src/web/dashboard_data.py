@@ -11,7 +11,9 @@ Schema (from database.py):
     )
 
 A "run" is the set of rows that share the same (id_task, dt_task_start).
-A run is considered successful when ALL its step rows have success_step = 1.
+A run is considered successful when success_task = 1 (set by BackupTask
+itself). This correctly captures failures where steps were skipped entirely
+(e.g. remote host unreachable — sync never ran, so no failed step was recorded).
 """
 
 import sqlite3
@@ -81,13 +83,14 @@ def get_summary(db_path: Path) -> dict:
                 id_task,
                 dt_task_start,
                 COUNT(*)            AS step_count,
-                SUM(success_step)   AS ok_steps
+                SUM(success_step)   AS ok_steps,
+                MIN(success_task)   AS success_task
             FROM task_run
             GROUP BY id_task, dt_task_start
         """).fetchall()
 
     total = len(rows)
-    successful = sum(r["step_count"] == r["ok_steps"] for r in rows)
+    successful = sum(bool(r["success_task"]) for r in rows)
     tasks = sorted({r["id_task"] for r in rows})
     last_ts = max((r["dt_task_start"] for r in rows), default=None)
 
@@ -127,7 +130,10 @@ def get_task_history(db_path: Path, task_name: str | None = None, limit: int = 5
     runs: list[dict] = []
     for r in run_rows:
         key = (r["id_task"], r["dt_task_start"])
-        success = r["step_count"] == r["ok_steps"]
+        # Use success_task (set by BackupTask itself) as the authoritative
+        # outcome. Step-count comparison misses failures where steps were
+        # skipped entirely (e.g. remote host unreachable — sync never ran).
+        success = bool(r["success_task"])
         elapsed_secs = (r["dt_task_end"] or r["dt_task_start"]) - r["dt_task_start"]
         h, rem = divmod(int(elapsed_secs), 3600)
         m, s = divmod(rem, 60)
@@ -253,13 +259,14 @@ def get_task_stats(db_path: Path) -> list[dict]:
                 id_task,
                 COUNT(DISTINCT dt_task_start)   AS total_runs,
                 MAX(dt_task_start)              AS last_run,
-                SUM(CASE WHEN step_count = ok_steps THEN 1 ELSE 0 END) AS successes
+                SUM(CASE WHEN success_task = 1 THEN 1 ELSE 0 END) AS successes
             FROM (
                 SELECT
                     id_task,
                     dt_task_start,
                     COUNT(*)          AS step_count,
-                    SUM(success_step) AS ok_steps
+                    SUM(success_step) AS ok_steps,
+                    MIN(success_task) AS success_task
                 FROM task_run
                 GROUP BY id_task, dt_task_start
             )
