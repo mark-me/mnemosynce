@@ -66,11 +66,13 @@
           </thead>
           <tbody>
             {% for step in run.steps %}
-            <tr>
+            <tr class="{% if not step.success %}table-danger{% endif %}">
               <td class="fw-semibold">{{ step.step }}</td>
               <td>
                 {% if step.success %}
                   <span class="badge bg-success">OK</span>
+                {% elif step.skip_reason %}
+                  <span class="badge bg-secondary">Skipped</span>
                 {% else %}
                   <span class="badge bg-danger">Failed</span>
                 {% endif %}
@@ -86,6 +88,13 @@
                 {{ step.dir_to }}
               </td>
             </tr>
+            {% if not step.success and step.skip_reason %}
+            <tr class="table-danger">
+              <td colspan="6" class="text-danger small ps-4">
+                <i class="bi bi-exclamation-triangle me-1"></i>{{ step.skip_reason }}
+              </td>
+            </tr>
+            {% endif %}
             {% endfor %}
           </tbody>
         </table>

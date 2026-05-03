@@ -233,6 +233,7 @@ def _index_steps_by_run(step_rows: list[sqlite3.Row]) -> dict[tuple[object, obje
                 "elapsed": s["time_elapsed"] or "—",
                 "dir_from": s["dir_from"] or "—",
                 "dir_to": s["dir_to"] or "—",
+                "skip_reason": s["skip_reason"] or None,
             }
         )
     return steps_by_run

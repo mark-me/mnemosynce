@@ -45,10 +45,20 @@ class LogDB:
                 success_step    INTEGER,
                 dir_from        TEXT,
                 dir_to          TEXT,
-                time_elapsed    TEXT
+                time_elapsed    TEXT,
+                skip_reason     TEXT
                 )"""
         )
         self.db.commit()
+
+    def _migrate(self) -> None:
+        """Add columns introduced after initial release without dropping existing data."""
+        cursor = self.db.cursor()
+        existing = {row[1] for row in cursor.execute("PRAGMA table_info(task_run)")}
+        if "skip_reason" not in existing:
+            cursor.execute("ALTER TABLE task_run ADD COLUMN skip_reason TEXT")
+            self.db.commit()
+        self._migrate()
 
     def add_task_run(self, task_status: dict) -> None:
         """Store task run results
@@ -62,7 +72,7 @@ class LogDB:
         cursor = self.db.cursor()
         for step in task_status["steps"]:
             cursor.execute(
-                "INSERT INTO task_run VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO task_run VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     task_status["name"],
                     task_status["dt_task_start"],
@@ -72,9 +82,10 @@ class LogDB:
                     step["dt_start"],
                     step["dt_end"],
                     step["success"],
-                    step["dir_from"],
-                    step["dir_to"],
-                    step["time_elapsed"],
+                    step.get("dir_from", ""),
+                    step.get("dir_to", ""),
+                    step.get("time_elapsed", ""),
+                    step.get("skip_reason", None),
                 ),
             )
         self.db.commit()

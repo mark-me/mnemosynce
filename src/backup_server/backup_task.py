@@ -36,7 +36,6 @@ class BackupTask:
         dir_remote: str,
         work_dir: Path = None,
         runner: Runner = subprocess.run,
-        ssh_config_file: Path = None,
     ) -> None:
         """Construct a BackupTask from a task definition and backup locations.
 
@@ -53,9 +52,6 @@ class BackupTask:
                 resolved from the package directory (``_SCRIPTS_DIR``) regardless of
                 this value.
             runner (Runner): Callable used to execute shell commands, mainly for testing injection.
-            ssh_config_file (Path | None): Path to an SSH client config file passed via ``-F``.
-                When set, all ssh/ping host-reachability checks use this config, which
-                allows the persisted known_hosts in the data volume to be used.
         """
         self._name = task["name"]
         self._dir_source = task["dir_source"]
@@ -65,7 +61,6 @@ class BackupTask:
         self._scripts_dir = _SCRIPTS_DIR
         self._work_dir = work_dir or Path.cwd()
         self._runner = runner
-        self._ssh_config_file = ssh_config_file
         self._write_excludes(task.get("excludes", []))
 
     def _write_excludes(self, excludes: list) -> None:
@@ -96,13 +91,38 @@ class BackupTask:
         if not self._test_locations_local():
             self._status["success"] = False
             self._status["dt_task_end"] = time.time()
+            # Record a synthetic step so the failure appears in run history
+            self._status["steps"].append(
+                self._make_skipped_step(
+                    "backup",
+                    reason=f"Source or local destination not reachable "
+                           f"(source: {self._dir_source}, dest: {self._dir_local})",
+                )
+            )
+            self._status["steps"].append(self._make_skipped_step("retention"))
+            self._status["steps"].append(self._make_skipped_step("sync"))
             return self._status
 
         success = self._backup()
-        if success:
+        if not success:
+            self._status["steps"].append(self._make_skipped_step("retention"))
+            self._status["steps"].append(self._make_skipped_step("sync"))
+        else:
             success = self._apply_retention_policy()
-        if success:
-            success = self._test_location_remote() and self._sync_remote()
+            if not success:
+                self._status["steps"].append(self._make_skipped_step("sync"))
+            else:
+                remote_ok = self._test_location_remote()
+                if not remote_ok:
+                    self._status["steps"].append(
+                        self._make_skipped_step(
+                            "sync",
+                            reason=f"Remote destination not reachable: {self._dir_remote}",
+                        )
+                    )
+                    success = False
+                else:
+                    success = self._sync_remote()
 
         self._status["success"] = success
         self._status["dt_task_end"] = time.time()
@@ -349,15 +369,14 @@ class BackupTask:
             logger.error(f"Cannot reach host '{host}'")
             return False
         if (
-            self._runner(self._ssh_cmd("-q", f"{user}@{host}", "exit"), capture_output=True).returncode
+            self._runner(["ssh", "-q", f"{user}@{host}", "exit"], capture_output=True).returncode
             != 0
         ):
             logger.error(f"Cannot ssh into server '{host}' for user '{user}'")
             return False
-        import shlex
         if (
             self._runner(
-                self._ssh_cmd(f"{user}@{host}", f"test -d {shlex.quote(dir)}"), capture_output=True
+                ["ssh", f"{user}@{host}", "test", "-d", dir], capture_output=True
             ).returncode
             != 0
         ):
@@ -365,7 +384,7 @@ class BackupTask:
                 logger.warning(f"Directory '{dir}' not found on '{host}', creating it")
 
                 mkdir_result = self._runner(
-                    self._ssh_cmd(f"{user}@{host}", f"mkdir -p {shlex.quote(dir)}"),
+                    ["ssh", f"{user}@{host}", "mkdir", "-p", dir],
                     capture_output=True,
                     text=True,
                 )
@@ -384,13 +403,29 @@ class BackupTask:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _ssh_cmd(self, *args: str) -> list:
-        """Build an ssh command list, prepending -F <config> when configured."""
-        cmd = ["ssh"]
-        if self._ssh_config_file:
-            cmd += ["-F", str(self._ssh_config_file)]
-        cmd += list(args)
-        return cmd
+    def _make_skipped_step(self, step_name: str, reason: str = "Previous step failed") -> dict:
+        """Build a synthetic step record for a step that was skipped due to a prior failure.
+
+        Args:
+            step_name (str): The name of the step that was skipped.
+            reason (str): Human-readable explanation of why it was skipped.
+
+        Returns:
+            dict: A step status dict compatible with the database schema and dashboard.
+        """
+        now = time.time()
+        return {
+            "step": step_name,
+            "dir_from": self._dir_source,
+            "dir_to": self._dir_local,
+            "success": False,
+            "dt_start": now,
+            "dt_end": now,
+            "time_elapsed": "00:00:00",
+            "file_log": self._work_dir / f"{self._name}_{step_name}.log",
+            "skipped": True,
+            "skip_reason": reason,
+        }
 
     def _stderr_has_no_fatal_errors(self, stderr: str) -> bool:
         """Return True if every non-empty stderr line is a known ignorable warning."""
