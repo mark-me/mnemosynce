@@ -2,21 +2,21 @@
 
 **Remember everything.**
 
-A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email — all managed through a clean web dashboard.
+A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email - all managed through a clean web dashboard.
 
 ![Mnemosynce Logo](assets/images/banner.png)
 
 ## ✨ Features
 
-- **Snapshot backups** — Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
-- **Simple restores** — Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` — no special tool needed
-- **Smart retention** — Automatically prunes old backups according to your policy
-- **Remote sync** — Securely mirrors everything to a secondary location over SSH
-- **Web dashboard** — Real-time status, history, configuration editor, and progress monitoring
-- **Guided setup** — First-time wizard walks you through configuration, SSH keys, and scheduling
-- **Scheduled runs** — Built-in APScheduler with flexible cron-style timing
-- **Email reports** — Rich HTML summaries with log attachments on failures
-- **Multi-source** — Supports local paths and remote SSH sources (`user@host:/path`)
+- **Snapshot backups** - Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
+- **Simple restores** - Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` - no special tool needed
+- **Smart retention** - Automatically prunes old backups according to your policy
+- **Remote sync** - Securely mirrors everything to a secondary location over SSH
+- **Web dashboard** - Real-time status, history, configuration editor, and progress monitoring
+- **Guided setup** - First-time wizard walks you through configuration, SSH keys, and scheduling
+- **Scheduled runs** - Built-in APScheduler with flexible cron-style timing
+- **Email reports** - Rich HTML summaries with log attachments on failures
+- **Multi-source** - Supports local paths and remote SSH sources (`user@host:/path`)
 
 ## 🔁 Restoring is just copying
 
@@ -34,7 +34,7 @@ Unchanged files are stored as hard links across snapshots, so each dated folder 
 
 ## 📖 Documentation
 
-Full user and developer documentation — including a [full restore guide](https://mark-me.github.io/mnemosynce/user/restoring/#restoring-from-the-remote-store) — is available at the project's [GitHub Pages site](https://mark-me.github.io/mnemosynce/). See `docs-site/` for the source, built with [Zensical](https://zensical.org).
+Full user and developer documentation - including a [full restore guide](https://mark-me.github.io/mnemosynce/user/restoring/#restoring-from-the-remote-store) - is available at the project's [GitHub Pages site](https://mark-me.github.io/mnemosynce/). See `docs-site/` for the source, built with [Zensical](https://zensical.org).
 
 ## 📥 Quick start
 
@@ -54,7 +54,7 @@ docker run -d \
 
 Then open [http://your-server:5000](http://your-server:5000) and follow the setup wizard.
 
-> **Note** — `SECRET_KEY` and `ADMIN_PASSWORD` must be changed from the defaults.
+> **Note** - `SECRET_KEY` and `ADMIN_PASSWORD` must be changed from the defaults.
 > The container will refuse to start in production if they are left as placeholders.
 
 ### Manual installation
@@ -142,7 +142,7 @@ uv run pytest --cov=src --cov-report=term-missing -m "not functional"
 ```text
 mnemosynce/
 ├── src/
-│   ├── backup_server/         # Core backup engine — no Flask dependency
+│   ├── backup_server/         # Core backup engine - no Flask dependency
 │   │   ├── backup_task.py     # Orchestrates one task: backup → retention → sync
 │   │   ├── config_file.py     # Reads and validates backup_config.yml
 │   │   ├── database.py        # SQLite run log
