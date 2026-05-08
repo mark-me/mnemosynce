@@ -9,4 +9,5 @@ printf "Log of step 3: Synching backups - " + $NAME_SNAPSHOT + ' - ' > $FILE_LOG
 date >> $FILE_LOG
 
 rsync -azhtH --numeric-ids --delete --log-file=$FILE_LOG \
-  -e "ssh -i /root/.ssh/id_ed25519_backup" ${DIR_LOCAL} ${DIR_REMOTE}
+  -e "ssh -F /data/ssh/ssh_config" \
+  ${DIR_LOCAL} ${DIR_REMOTE}
