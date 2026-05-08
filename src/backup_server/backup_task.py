@@ -370,7 +370,7 @@ class BackupTask:
         Returns:
             bool: True if all connectivity and directory checks succeed, otherwise False.
         """
-        if self._runner(["ping", "-c 1", host], capture_output=True).returncode != 0:
+        if self._runner(["ping", "-c", "1", host], capture_output=True).returncode != 0:
             logger.error(f"Cannot reach host '{host}'")
             return False
         if (
