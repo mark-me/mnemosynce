@@ -20,7 +20,7 @@ mnemosynce/
 │   │   ├── main.py             # CLI entry point
 │   │   ├── backup.sh           # rsync snapshot script
 │   │   ├── delete_old_backups.sh     # Retention policy script
-│   │   ├── sync_backup_to_remote.sh  # Remote sync script
+│   │   ├── sync_backup_to_remote.sh  # Remote sync script (uses /data/ssh/ssh_config)
 │   │   └── templates/          # Jinja2 email templates
 │   ├── config/
 │   │   └── config.py           # Flask config classes (Dev / Test / Production)
@@ -43,9 +43,7 @@ mnemosynce/
 │       │   └── ssh_keys.py
 │       ├── static/             # CSS and images
 │       └── templates/web/      # Jinja2 page templates
-├── backup.sh                   # rsync snapshot script
-├── delete_old_backups.sh       # Retention policy script
-├── sync_backup_to_remote.sh    # Remote sync script
+
 ├── tests/                      # pytest suite
 ├── docker/Dockerfile
 ├── pyproject.toml

@@ -44,7 +44,7 @@ Each step is run via `subprocess.run` (injectable via the `runner` parameter for
 |------|--------|----------------|
 | Backup | `backup.sh` | `-az --delete --hard-links --exclude-from=excludes.lst` |
 | Retention | `delete_old_backups.sh` | Shell date arithmetic — no rsync |
-| Sync | `sync_backup_to_remote.sh` | `-azhtH --numeric-ids --delete -e ssh -i /root/.ssh/id_ed25519_backup` |
+| Sync | `sync_backup_to_remote.sh` | `-azhtH --numeric-ids --delete -e "ssh -F /data/ssh/ssh_config"` |
 
 ### Error handling
 
@@ -118,7 +118,7 @@ The three bash scripts live in `src/backup_server/` alongside the Python modules
 |--------|-----------|---------|
 | `backup.sh` | `NAME DIR_BACKUP DIR_SOURCE` | rsync snapshot with hard-link deduplication |
 | `delete_old_backups.sh` | `NAME DIR_BACKUP` | Prune snapshots outside the retention window |
-| `sync_backup_to_remote.sh` | `NAME DIR_LOCAL DIR_REMOTE` | rsync to remote storage over SSH |
+| `sync_backup_to_remote.sh` | `NAME DIR_LOCAL DIR_REMOTE` | rsync to remote storage over SSH using `/data/ssh/ssh_config` |
 
 !!! note
     The scripts write per-step log files (`<name>_backup.log`, etc.) to the current working directory. `main.py` deletes these after the email is sent.

@@ -50,7 +50,9 @@ Test that the server can reach its sources and send email.
 | SSH | Ping → SSH login → (optionally) directory existence |
 | Email | SMTP reachability → Gmail login → test message sent |
 
-Run at least one successful test. The step is marked complete and the **Next** button activates. If you cannot get a test to pass, click **Skip for now** and fix it later from **Settings → Connections**.
+Before running an SSH test, use the **Trust host key** panel to add each remote host to `known_hosts`. SSH refuses to connect non-interactively to unknown hosts, so this step is required before the connection test (or any backup run) can succeed. Enter the hostname and click **Trust host key** — the application runs `ssh-keyscan` and saves the result to `/data/ssh/known_hosts` automatically.
+
+Once you have trusted the host keys, run at least one successful SSH or email test. The step is marked complete and the **Next** button activates. If you cannot get a test to pass, click **Skip for now** and fix it later from **Settings → Connections**.
 
 ---
 

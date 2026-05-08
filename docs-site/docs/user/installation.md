@@ -22,7 +22,7 @@ Create a `docker-compose.yml` wherever you want to manage the service:
 ```yaml
 services:
   mnemosynce:
-    image: ghcr.io/mark-me/backup-server:latest
+    image: ghcr.io/mark-me/mnemosynce:latest
     restart: unless-stopped
     ports:
       - "5000:5000"

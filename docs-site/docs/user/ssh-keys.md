@@ -57,7 +57,19 @@ ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519_backup -N ""
 ssh-copy-id -i /root/.ssh/id_ed25519_backup.pub user@backup-host
 ```
 
-This key is **not** managed by the web UI and is not stored in `/data/ssh/`.
+This key is **not** managed by the web UI and is not stored in `/data/ssh/`. However, the application detects it automatically at startup and includes it in the generated `/data/ssh/ssh_config`, so the sync script honours it alongside any UI-managed keys.
+
+## Trusting remote host keys
+
+Before an SSH connection can succeed non-interactively (during a backup run or a connection test), the remote host's public key must be present in `known_hosts`. Use the **Trust host key** panel on **Settings → Connections**:
+
+1. Enter the hostname (e.g. `pibackup` or `desktop-ubuntu`).
+2. Click **Trust host key**.
+
+The application runs `ssh-keyscan` against that host and appends the result to `/data/ssh/known_hosts`. This file is inside the persistent data volume so it survives container restarts.
+
+!!! tip "Do this before testing connections"
+    Run **Trust host key** for every remote host before using the SSH connection test or triggering a backup run. SSH will refuse to connect to any host not in `known_hosts` when running non-interactively.
 
 ---
 
