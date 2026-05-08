@@ -2,7 +2,10 @@
 icon: lucide/hard-drive
 ---
 
-# Mnemosynce
+<div style="display:flex; align-items:center; gap:12px;">
+  <img src="images/mnemosynce.svg" width="48">
+  <h1 style="margin:0;">Mnemosynce</h1>
+</div>
 
 Mnemosynce is a **backup orchestrator for Linux home servers**. It runs a set of rsync tasks defined in a YAML config file, applies a tiered retention policy, syncs everything to a remote machine, and emails you a status report after every run — all from a self-hosted web interface.
 
