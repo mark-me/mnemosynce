@@ -1,22 +1,22 @@
 # Mnemosynce
 
+![Mnemosynce Logo](assets/images/banner.png)
+
 **Remember everything.**
 
-A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email - all managed through a clean web dashboard.
-
-![Mnemosynce Logo](assets/images/banner.png)
+A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email — all managed through a clean web dashboard.
 
 ## ✨ Features
 
-- **Snapshot backups** - Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
-- **Simple restores** - Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` - no special tool needed
-- **Smart retention** - Automatically prunes old backups according to your policy
-- **Remote sync** - Securely mirrors everything to a secondary location over SSH
-- **Web dashboard** - Real-time status, history, configuration editor, and progress monitoring
-- **Guided setup** - First-time wizard walks you through configuration, SSH keys, and scheduling
-- **Scheduled runs** - Built-in APScheduler with flexible cron-style timing
-- **Email reports** - Rich HTML summaries with log attachments on failures
-- **Multi-source** - Supports local paths and remote SSH sources (`user@host:/path`)
+- **Snapshot backups** — Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
+- **Simple restores** — Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` — no special tool needed
+- **Smart retention** — Automatically prunes old backups according to your policy
+- **Remote sync** — Securely mirrors everything to a secondary location over SSH
+- **Web dashboard** — Real-time status, history, configuration editor, and progress monitoring
+- **Guided setup** — First-time wizard walks you through configuration, SSH keys, and scheduling
+- **Scheduled runs** — Built-in APScheduler with flexible cron-style timing
+- **Email reports** — Rich HTML summaries with log attachments on failures
+- **Multi-source** — Supports local paths and remote SSH sources (`user@host:/path`)
 
 ## 🔁 Restoring is just copying
 
@@ -44,6 +44,7 @@ Full user and developer documentation - including a [full restore guide](https:/
 docker run -d \
   --name mnemosynce \
   -v ./data:/data \
+  -v /mnt/backup:/mnt/backup \
   -p 5000:5000 \
   -e SECRET_KEY=change-me \
   -e ADMIN_PASSWORD=change-me \
@@ -54,8 +55,12 @@ docker run -d \
 
 Then open [http://your-server:5000](http://your-server:5000) and follow the setup wizard.
 
-> **Note** - `SECRET_KEY` and `ADMIN_PASSWORD` must be changed from the defaults.
+> [!NOTE]
+> `SECRET_KEY` and `ADMIN_PASSWORD` must be changed from the defaults.
 > The container will refuse to start in production if they are left as placeholders.
+
+> [!TIP]
+> Before running your first backup, go to **Settings → Connections** and use the **Trust host key** panel for each remote host. SSH refuses to connect non-interactively to unknown hosts, so this step is required before connection tests or backup runs will succeed.
 
 ### Manual installation
 
@@ -90,8 +95,8 @@ All persistent data lives in the `/data` volume (or `dev-data/` in development):
 |------|---------|
 | `backup_config.yml` | Backup task definitions |
 | `log.db` | Run history for the dashboard |
-| `ssh/` | SSH keypairs managed via the web UI |
 | `schedule.json` | Saved cron schedule |
+| `ssh/` | SSH keypairs, `ssh_config`, and `known_hosts` — all managed via the web UI |
 
 Example `backup_config.yml`:
 
@@ -171,7 +176,3 @@ mnemosynce/
 ## ⚖️ License
 
 MIT © 2026 Mark Zwart
-
----
-
-*"Your data's eternal memory keeper."*
