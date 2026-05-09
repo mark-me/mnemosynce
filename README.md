@@ -92,7 +92,7 @@ uv run gunicorn \
 All persistent data lives in the `/data` volume (or `dev-data/` in development):
 
 | Path | Purpose |
-|------|---------|
+| ---- | ------- |
 | `backup_config.yml` | Backup task definitions |
 | `log.db` | Run history for the dashboard |
 | `schedule.json` | Saved cron schedule |
