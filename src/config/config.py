@@ -102,6 +102,8 @@ class BaseConfig:
         (self.SSH_KEY_DIR / "ssh_config").write_text(
             f"Host *\n"
             f"    UserKnownHostsFile {known_hosts}\n"
+            f"    ServerAliveInterval 60"
+            f"    ServerAliveCountMax 10"
             f"    StrictHostKeyChecking yes\n"
             f"    IdentitiesOnly yes\n"
             f"{identity_lines}",
