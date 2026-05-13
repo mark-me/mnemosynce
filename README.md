@@ -178,6 +178,10 @@ mnemosynce/
 └── pyproject.toml
 ```
 
+## 🙏 Acknowledgements
+
+Mnemosynce is built on great open source work. See [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md) for the full list of libraries and tools that make it possible.
+
 ## ⚖️ License
 
 MIT © 2026 Mark Zwart
