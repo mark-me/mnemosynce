@@ -4,21 +4,21 @@
 
 **Remember everything.**
 
-A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email — all managed through a clean web dashboard.
+A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email - all managed through a clean web dashboard.
 
 📖 **[Documentation](https://mark-me.github.io/mnemosynce/)**
 
 ## ✨ Features
 
-- **Snapshot backups** — Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
-- **Simple restores** — Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` — no special tool needed
-- **Smart retention** — Automatically prunes old backups according to your policy
-- **Remote sync** — Securely mirrors everything to a secondary location over SSH
-- **Web dashboard** — Real-time status, history, configuration editor, and progress monitoring
-- **Guided setup** — First-time wizard walks you through configuration, SSH keys, and scheduling
-- **Scheduled runs** — Built-in APScheduler with flexible cron-style timing
-- **Email reports** — Rich HTML summaries with log attachments on failures
-- **Multi-source** — Supports local paths and remote SSH sources (`user@host:/path`)
+- **Snapshot backups** - Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
+- **Simple restores** - Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` - no special tool needed
+- **Smart retention** - Automatically prunes old backups according to your policy
+- **Remote sync** - Securely mirrors everything to a secondary location over SSH
+- **Web dashboard** - Real-time status, history, configuration editor, and progress monitoring
+- **Guided setup** - First-time wizard walks you through configuration, SSH keys, and scheduling
+- **Scheduled runs** - Built-in APScheduler with flexible cron-style timing
+- **Email reports** - Rich HTML summaries with log attachments on failures
+- **Multi-source** - Supports local paths and remote SSH sources (`user@host:/path`)
 
 ## 🔁 Restoring is just copying
 
@@ -97,11 +97,10 @@ uv run gunicorn \
 All persistent data lives in the `/data` volume (or `dev-data/` in development):
 
 | Path | Purpose |
-|------|---------|
+| ---- | ------- |
 | `backup_config.yml` | Backup task definitions |
 | `log.db` | Run history for the dashboard |
-
-| `ssh/` | SSH keypairs, `ssh_config`, and `known_hosts` — all managed via the web UI |
+| `ssh/` | SSH keypairs, `ssh_config`, and `known_hosts` - all managed via the web UI |
 
 Example `backup_config.yml`:
 
