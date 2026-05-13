@@ -79,7 +79,7 @@ class BackupTask:
         """
         file_excludes = self._work_dir / "excludes.lst"
         if file_excludes.exists():
-            file_excludes.unlink()
+            file_excludes.unlink(missing_ok=True)
         file_excludes.write_text("\n".join(excludes), encoding="utf-8")
 
     def start(self) -> dict:
@@ -370,7 +370,7 @@ class BackupTask:
         Returns:
             bool: True if all connectivity and directory checks succeed, otherwise False.
         """
-        if self._runner(["ping", "-c", "1", host], capture_output=True).returncode != 0:
+        if self._runner(["ping", "-c 1", host], capture_output=True).returncode != 0:
             logger.error(f"Cannot reach host '{host}'")
             return False
         if (
