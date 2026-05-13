@@ -8,6 +8,5 @@ FILE_LOG=${NAME_SNAPSHOT}_sync_remote.log
 printf "Log of step 3: Synching backups - " + $NAME_SNAPSHOT + ' - ' > $FILE_LOG
 date >> $FILE_LOG
 
-rsync -azhtH --numeric-ids --delete --ignore-errors --safe-links --log-file=$FILE_LOG \
-  -e "ssh -F /data/ssh/ssh_config" \
-  ${DIR_LOCAL} ${DIR_REMOTE}
+rsync -azhtH --numeric-ids --ignore-errors --delete --log-file=$FILE_LOG \
+  -e "ssh -F /data/ssh/ssh_config" ${DIR_LOCAL} ${DIR_REMOTE}
