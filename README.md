@@ -6,6 +6,8 @@
 
 A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email — all managed through a clean web dashboard.
 
+📖 **[Documentation](https://mark-me.github.io/mnemosynce/)**
+
 ## ✨ Features
 
 - **Snapshot backups** — Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
@@ -60,7 +62,7 @@ Then open [http://your-server:5000](http://your-server:5000) and follow the setu
 > The container will refuse to start in production if they are left as placeholders.
 
 > [!IMPORTANT]
-> `GMAIL_PASSWORD` must be a Gmail **app password**, not your regular Google account password. See the [Gmail app password setup guide](docs-site/docs/user/gmail-app-password.md) for instructions.
+> `GMAIL_PASSWORD` must be a Gmail **app password**, not your regular Google account password. See the [Gmail app password setup guide](https://mark-me.github.io/mnemosynce/user/gmail-app-password/) for instructions.
 
 > [!TIP]
 > Before running your first backup, go to **Settings → Connections** and use the **Trust host key** panel for each remote host. SSH refuses to connect non-interactively to unknown hosts, so this step is required before connection tests or backup runs will succeed.
