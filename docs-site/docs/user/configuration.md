@@ -38,6 +38,13 @@ email_report: you@example.com
 # CC'd only when a task fails. Omit or set equal to email_report to disable.
 email_admin: admin@example.com
 
+# Automatic backup schedule (optional).
+# Set and toggled from the web UI, or edit directly here.
+# Cron expression is evaluated in UTC.
+schedule:
+  cron: "0 4 * * *"   # every day at 04:00 UTC
+  enabled: true
+
 tasks:
   - name: ServerData
     dir_source: /data          # local path on this machine
@@ -64,7 +71,19 @@ tasks:
 | `email_sender` | Yes | Gmail address used as the From address and SMTP username |
 | `email_report` | Yes | Address that receives the status report after every run |
 | `email_admin` | No | Additional CC address for failure-only notifications. Omit or leave equal to `email_report` to disable |
+| `schedule` | No | Automatic backup schedule (see below) |
 | `tasks` | Yes | List of one or more task definitions (see below) |
+
+## Schedule
+
+The `schedule` section is optional and is managed by the web UI, but you can also edit it directly in the YAML file.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `cron` | Yes | Standard five-field cron expression evaluated in UTC (e.g. `"0 4 * * *"` for daily at 04:00) |
+| `enabled` | Yes | `true` to activate the schedule, `false` to save it without running |
+
+Setting `enabled: false` preserves the cron expression while suspending automatic runs — useful when you want to pause backups temporarily without losing your schedule configuration.
 
 ## Task fields
 
@@ -124,5 +143,7 @@ The Gmail app password is never stored in the config file. Supply it through the
 
     [nix-sops](https://github.com/Mic92/sops-nix) users can point `GMAIL_PASSWORD_FILE` at the decrypted secret file.
 
-!!! tip "Generating a Gmail app password"
-    Go to your Google Account → Security → 2-Step Verification → App passwords. Generate one labelled "Mnemosynce". The password is a 16-character string with no spaces.
+!!! tip "Gmail app password setup"
+    Gmail requires a dedicated app password for SMTP access — your regular Google
+    password will not work. See [Gmail app password](gmail-app-password.md) for
+    step-by-step instructions.

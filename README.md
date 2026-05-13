@@ -4,19 +4,19 @@
 
 **Remember everything.**
 
-A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce ([Mnemosyne](https://en.wikipedia.org/wiki/Mnemosyne) + Sync) creates dated snapshots with [`rsync`](https://rsync.samba.org/), enforces smart retention policies, syncs to remote storage, and keeps you informed via email - all managed through a clean web dashboard.
+A beautiful, reliable backup orchestrator for Linux home servers. Mnemosynce (Mnemosyne + Sync) creates dated snapshots with `rsync`, enforces smart retention policies, syncs to remote storage, and keeps you informed via email — all managed through a clean web dashboard.
 
 ## ✨ Features
 
-- **Snapshot backups** - Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
-- **Simple restores** - Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` - no special tool needed
-- **Smart retention** - Automatically prunes old backups according to your policy
-- **Remote sync** - Securely mirrors everything to a secondary location over SSH
-- **Web dashboard** - Real-time status, history, configuration editor, and progress monitoring
-- **Guided setup** - First-time wizard walks you through configuration, SSH keys, and scheduling
-- **Scheduled runs** - Built-in APScheduler with flexible cron-style timing
-- **Email reports** - Rich HTML summaries with log attachments on failures
-- **Multi-source** - Supports local paths and remote SSH sources (`user@host:/path`)
+- **Snapshot backups** — Efficient daily/weekly/monthly/yearly snapshots using `rsync` + hard links
+- **Simple restores** — Every snapshot is a plain directory; restore a single file or everything with `cp` or `rsync` — no special tool needed
+- **Smart retention** — Automatically prunes old backups according to your policy
+- **Remote sync** — Securely mirrors everything to a secondary location over SSH
+- **Web dashboard** — Real-time status, history, configuration editor, and progress monitoring
+- **Guided setup** — First-time wizard walks you through configuration, SSH keys, and scheduling
+- **Scheduled runs** — Built-in APScheduler with flexible cron-style timing
+- **Email reports** — Rich HTML summaries with log attachments on failures
+- **Multi-source** — Supports local paths and remote SSH sources (`user@host:/path`)
 
 ## 🔁 Restoring is just copying
 
@@ -59,6 +59,9 @@ Then open [http://your-server:5000](http://your-server:5000) and follow the setu
 > `SECRET_KEY` and `ADMIN_PASSWORD` must be changed from the defaults.
 > The container will refuse to start in production if they are left as placeholders.
 
+> [!IMPORTANT]
+> `GMAIL_PASSWORD` must be a Gmail **app password**, not your regular Google account password. See the [Gmail app password setup guide](docs-site/docs/user/gmail-app-password.md) for instructions.
+
 > [!TIP]
 > Before running your first backup, go to **Settings → Connections** and use the **Trust host key** panel for each remote host. SSH refuses to connect non-interactively to unknown hosts, so this step is required before connection tests or backup runs will succeed.
 
@@ -92,11 +95,11 @@ uv run gunicorn \
 All persistent data lives in the `/data` volume (or `dev-data/` in development):
 
 | Path | Purpose |
-| ---- | ------- |
+|------|---------|
 | `backup_config.yml` | Backup task definitions |
 | `log.db` | Run history for the dashboard |
-| `schedule.json` | Saved cron schedule |
-| `ssh/` | SSH keypairs, `ssh_config`, and `known_hosts` - all managed via the web UI |
+
+| `ssh/` | SSH keypairs, `ssh_config`, and `known_hosts` — all managed via the web UI |
 
 Example `backup_config.yml`:
 

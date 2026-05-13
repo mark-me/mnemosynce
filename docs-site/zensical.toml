@@ -12,6 +12,7 @@ nav = [
     { "First-time setup"  = "user/setup-wizard.md" },
     { "Configuration"     = "user/configuration.md" },
     { "SSH keys"          = "user/ssh-keys.md" },
+    { "GMail settings"    = "user/gmail-app-password.md" },
     { "Scheduling"        = "user/scheduling.md" },
     { "Monitoring"        = "user/monitoring.md" },
     { "Docker"            = "user/docker.md" },

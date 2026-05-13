@@ -28,9 +28,9 @@ The single volume `/data` holds all persistent state:
 
 ```
 /data/
-├── backup_config.yml   ← your backup configuration
+├── backup_config.yml   ← your backup configuration (includes schedule)
 ├── log.db              ← SQLite run history
-├── schedule.json       ← saved cron schedule
+
 └── ssh/                ← generated SSH keypairs and known_hosts
     ├── ssh_config      ← auto-generated SSH client config
     ├── known_hosts     ← trusted remote host keys
@@ -55,7 +55,7 @@ volumes:
 | `ADMIN_USER` | No | Web UI username (default: `admin`) |
 | `ADMIN_PASSWORD` | Yes (production) | Web UI password |
 | `GMAIL_ADDRESS` | Yes | Gmail sender address |
-| `GMAIL_PASSWORD` | Yes | Gmail [app password](https://support.google.com/accounts/answer/185833) |
+| `GMAIL_PASSWORD` | Yes | Gmail [app password](gmail-app-password.md) — see setup guide |
 | `DATA_ROOT` | No | Override the data directory (default: `/data`) |
 | `APP_ENV` | No | `production` (default in Docker) or `development` |
 
