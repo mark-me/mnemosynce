@@ -44,6 +44,6 @@ EXPOSE 5000
 # Gunicorn is used in production for proper request handling.
 CMD ["uv", "run", "gunicorn", \
     "--bind", "0.0.0.0:5000", \
-    "--workers", "2", \
+    "--workers", "1", \
     "--timeout", "120", \
     "web.app:create_app()"]

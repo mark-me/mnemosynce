@@ -86,7 +86,7 @@ def create_app(config: BaseConfig = None) -> Flask:
             }
         return {"setup_status": status, "setup_complete": status["complete"]}
 
-    if not app.testing and os.environ.get("WERKZEUG_RUN_MAIN") != "false":
+    if not app.testing and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         from web.scheduler import init_scheduler
         init_scheduler(app)
 
