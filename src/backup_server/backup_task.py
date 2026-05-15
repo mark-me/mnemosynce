@@ -15,6 +15,9 @@ _SCRIPTS_DIR = Path(__file__).parent
 _RSYNC_IGNORED_ERRORS = (
     "Permission denied (13)",
     "rsync error: some files/attrs were not transferred",
+    "rsync error: errors selecting input/output files, dirs",
+    "(code 23)",
+    "(code 24)",
 )
 
 # Type alias for the subprocess.run-compatible callable
@@ -199,6 +202,7 @@ class BackupTask:
             log_suffix="_sync_remote.log",
             dir_from=dir_local,
             dir_to=dir_remote,
+            check_stderr=True,
         )
 
     def _run_step(
