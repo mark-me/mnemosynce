@@ -53,9 +53,10 @@ def enrich_task_status(lst_task_status: list, db_log: LogDB) -> list:
 
 
 _SMTP_TIMEOUT_SECONDS = 30
-# Gmail's maximum message size is 25 MB. Stay well under it to avoid
-# timeouts mid-send caused by attaching a large, ever-growing log file.
-_MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024  # 5 MB
+# Gmail's maximum message size is 25 MB. The limit below is applied to the
+# compressed zip size, since JSON log files compress at roughly 10:1.
+# 20 MB compressed leaves headroom for the HTML body and step log attachments.
+_MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024  # 20 MB (compressed)
 
 
 def _smtp_send(sender: str, password: str, recipient: str, message_str: str) -> None:
@@ -156,6 +157,9 @@ class EmailReport:
     def _add_attachment(self, message: MIMEMultipart, file: Path) -> None:
         """Zip a file and attach it to the message, skipping files that are too large.
 
+        The size limit is applied to the compressed zip rather than the raw file,
+        since JSON log files typically compress at 10:1 or better.
+
         Args:
             message (MIMEMultipart): The message to attach to.
             file (Path): The file to zip and attach.
@@ -164,16 +168,18 @@ class EmailReport:
         if not file.exists():
             logger.warning(f"Attachment '{file}' not found, skipping")
             return
-        if file.stat().st_size > _MAX_ATTACHMENT_BYTES:
-            logger.warning(
-                f"Attachment '{file}' is {file.stat().st_size} bytes, "
-                f"exceeds {_MAX_ATTACHMENT_BYTES} byte limit — skipping"
-            )
-            return
         file_zip = file.parent / f"{file.stem}.zip"
         if file_zip.exists():
             file_zip.unlink()
         with ZipFile(file_zip, mode="w", compression=ZIP_DEFLATED, compresslevel=9) as zf:
             zf.write(file, arcname=file.name)
+        compressed_size = file_zip.stat().st_size
+        if compressed_size > _MAX_ATTACHMENT_BYTES:
+            file_zip.unlink()
+            logger.warning(
+                f"Attachment '{file}' compresses to {compressed_size:,} bytes, "
+                f"exceeds {_MAX_ATTACHMENT_BYTES:,} byte limit — skipping"
+            )
+            return
         with open(file_zip, "rb") as fh:
             message.attach(MIMEApplication(fh.read(), Name=file_zip.name))
