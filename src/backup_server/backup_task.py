@@ -15,9 +15,6 @@ _SCRIPTS_DIR = Path(__file__).parent
 _RSYNC_IGNORED_ERRORS = (
     "Permission denied (13)",
     "rsync error: some files/attrs were not transferred",
-    "rsync error: errors selecting input/output files, dirs",
-    "(code 23)",
-    "(code 24)",
 )
 
 # Type alias for the subprocess.run-compatible callable
@@ -202,7 +199,6 @@ class BackupTask:
             log_suffix="_sync_remote.log",
             dir_from=dir_local,
             dir_to=dir_remote,
-            check_stderr=True,
         )
 
     def _run_step(
@@ -275,7 +271,7 @@ class BackupTask:
         try:
             result = self._runner(cmd, capture_output=True, text=True)
             success = result.returncode == 0
-            if not success and check_stderr:
+            if not success and check_stderr and result.stderr.strip():
                 success = self._stderr_has_no_fatal_errors(result.stderr)
         except subprocess.SubprocessError as exc:
             logger.error(f"Step command for task '{self._name}' raised: {exc}")
