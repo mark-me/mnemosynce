@@ -126,12 +126,14 @@
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
+  let submitting = false;
+  let savedValue = editor.getValue();
+
   form.addEventListener("submit", () => {
+    submitting = true;
     textarea.value = editor.getValue();
-    form.appendChild(textarea);
   });
 
-  const savedValue = editor.getValue();
   editor.on("change", () => {
     const dirty = editor.getValue() !== savedValue;
     status.textContent = dirty ? "Unsaved changes" : "";
@@ -139,7 +141,7 @@
   });
 
   window.addEventListener("beforeunload", e => {
-    if (editor.getValue() !== savedValue) e.preventDefault();
+    if (!submitting && editor.getValue() !== savedValue) e.preventDefault();
   });
 </script>
 {% endblock %}
