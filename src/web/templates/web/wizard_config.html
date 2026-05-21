@@ -113,21 +113,15 @@
     editor.setOption("theme", isDark() ? "material-darker" : "default");
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
-  form.addEventListener("submit", () => {
-    // Mark as clean before submitting so the beforeunload guard doesn't
-    // fire a spurious "changes may be lost" browser dialog on redirect.
-    savedValue = editor.getValue();
-    textarea.value = editor.getValue();
-    form.appendChild(textarea);
-  });
-
-  const savedValue = editor.getValue();
+  editor.on("change", () => { textarea.value = editor.getValue(); });
+  let savedValue = editor.getValue();
   editor.on("change", () => {
     const dirty = editor.getValue() !== savedValue;
     status.textContent = dirty ? "Unsaved changes" : "";
     status.className   = dirty ? "ms-auto text-warning small" : "ms-auto text-secondary small";
   });
-
-  window.addEventListener("beforeunload", e => { if (editor.getValue() !== savedValue) e.preventDefault(); });
+  form.addEventListener("submit", () => {
+    savedValue = editor.getValue();
+  });
 </script>
 {% endblock %}

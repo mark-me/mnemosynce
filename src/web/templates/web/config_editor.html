@@ -74,21 +74,18 @@
       <i class="bi bi-floppy me-1"></i>Save
     </button>
     {% if file_exists %}
-    <button type="submit" form="revert-form"
-            class="btn btn-outline-secondary"
-            onclick="return confirm('Discard all unsaved edits?')">
-      <i class="bi bi-arrow-counterclockwise me-1"></i>Revert
-    </button>
+    <form method="post" action="{{ url_for('config_editor.reset') }}" class="d-inline">
+      <button type="submit" class="btn btn-outline-secondary"
+              onclick="return confirm('Discard all unsaved edits?')">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Revert
+      </button>
+    </form>
     {% endif %}
     <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary ms-auto">
       <i class="bi bi-x-lg me-1"></i>Cancel
     </a>
   </div>
 </form>
-
-{% if file_exists %}
-<form method="post" action="{{ url_for('config_editor.reset') }}" id="revert-form" class="d-none"></form>
-{% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -130,17 +127,14 @@
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
   editor.on("change", () => { textarea.value = editor.getValue(); });
-  const savedValue = editor.getValue();
+  let savedValue = editor.getValue();
   editor.on("change", () => {
     const dirty = editor.getValue() !== savedValue;
     status.textContent = dirty ? "Unsaved changes" : "";
     status.className   = dirty ? "ms-auto text-warning small" : "ms-auto text-secondary small";
   });
-  document.querySelectorAll("a.btn").forEach(link => {
-    link.addEventListener("click", e => {
-      if (editor.getValue() !== savedValue)
-        if (!confirm("You have unsaved changes. Leave without saving?")) e.preventDefault();
-    });
+  form.addEventListener("submit", () => {
+    savedValue = editor.getValue();
   });
 </script>
 {% endblock %}
