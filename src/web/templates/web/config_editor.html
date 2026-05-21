@@ -126,13 +126,13 @@
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
-  // Keep the hidden textarea in sync on every keystroke so the form always
-  // has the latest value, regardless of submit timing.
+  // Keep hidden textarea in sync on every keystroke so form always
+  // has the latest value regardless of submit timing.
   editor.on("change", () => {
     textarea.value = editor.getValue();
   });
 
-  // Track dirty state for the "Unsaved changes" indicator.
+  // Dirty-state indicator in the toolbar.
   const savedValue = editor.getValue();
   editor.on("change", () => {
     const dirty = editor.getValue() !== savedValue;
@@ -140,12 +140,16 @@
     status.className   = dirty ? "ms-auto text-warning small" : "ms-auto text-secondary small";
   });
 
-  // Suppress the leave-page warning when the user is actually submitting.
-  let submitting = false;
-  form.addEventListener("submit", () => { submitting = true; });
-
-  window.addEventListener("beforeunload", e => {
-    if (!submitting && editor.getValue() !== savedValue) e.preventDefault();
+  // Intercept navigation away from dirty editor via the Cancel link only —
+  // avoid beforeunload entirely as it fires during form submission too.
+  document.querySelectorAll("a.btn").forEach(link => {
+    link.addEventListener("click", e => {
+      if (editor.getValue() !== savedValue) {
+        if (!confirm("You have unsaved changes. Leave without saving?")) {
+          e.preventDefault();
+        }
+      }
+    });
   });
 </script>
 {% endblock %}
