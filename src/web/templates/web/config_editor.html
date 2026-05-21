@@ -126,29 +126,17 @@
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
-  // Keep hidden textarea in sync on every keystroke so form always
-  // has the latest value regardless of submit timing.
-  editor.on("change", () => {
-    textarea.value = editor.getValue();
-  });
-
-  // Dirty-state indicator in the toolbar.
+  editor.on("change", () => { textarea.value = editor.getValue(); });
   const savedValue = editor.getValue();
   editor.on("change", () => {
     const dirty = editor.getValue() !== savedValue;
     status.textContent = dirty ? "Unsaved changes" : "";
     status.className   = dirty ? "ms-auto text-warning small" : "ms-auto text-secondary small";
   });
-
-  // Intercept navigation away from dirty editor via the Cancel link only —
-  // avoid beforeunload entirely as it fires during form submission too.
   document.querySelectorAll("a.btn").forEach(link => {
     link.addEventListener("click", e => {
-      if (editor.getValue() !== savedValue) {
-        if (!confirm("You have unsaved changes. Leave without saving?")) {
-          e.preventDefault();
-        }
-      }
+      if (editor.getValue() !== savedValue)
+        if (!confirm("You have unsaved changes. Leave without saving?")) e.preventDefault();
     });
   });
 </script>
