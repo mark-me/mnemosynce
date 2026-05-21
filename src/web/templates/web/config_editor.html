@@ -126,19 +126,23 @@
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
 
-  let submitting = false;
-  let savedValue = editor.getValue();
-
-  form.addEventListener("submit", () => {
-    submitting = true;
+  // Keep the hidden textarea in sync on every keystroke so the form always
+  // has the latest value, regardless of submit timing.
+  editor.on("change", () => {
     textarea.value = editor.getValue();
   });
 
+  // Track dirty state for the "Unsaved changes" indicator.
+  const savedValue = editor.getValue();
   editor.on("change", () => {
     const dirty = editor.getValue() !== savedValue;
     status.textContent = dirty ? "Unsaved changes" : "";
     status.className   = dirty ? "ms-auto text-warning small" : "ms-auto text-secondary small";
   });
+
+  // Suppress the leave-page warning when the user is actually submitting.
+  let submitting = false;
+  form.addEventListener("submit", () => { submitting = true; });
 
   window.addEventListener("beforeunload", e => {
     if (!submitting && editor.getValue() !== savedValue) e.preventDefault();
