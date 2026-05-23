@@ -75,14 +75,19 @@ def _capture_run_log(log_path: Path, start_pos: int) -> Path:
 def main(
     file_config: str,
     password_reader: Callable[[str], str] = _read_password,
+    task_name: str | None = None,
 ) -> None:
-    """Run all backup tasks and send a status report email.
+    """Run backup tasks and send a status report email.
+
+    When *task_name* is given only that task is executed; otherwise all
+    tasks in the config are run in order.
 
     Args:
         file_config (str): Path to the YAML configuration file.
         password_reader: Callable that takes an env-var name and returns the
                          password string. Override in tests to avoid touching
                          the real filesystem or nix-sops secrets.
+        task_name (str | None): If set, run only the task with this name.
     """
     setup_logging()
 
@@ -97,10 +102,18 @@ def main(
     backup = config.read()
     cfg = get_config()
 
+    # Filter to the requested task when a name is supplied.
+    tasks_to_run = backup["tasks"]
+    if task_name is not None:
+        tasks_to_run = [t for t in tasks_to_run if t["name"] == task_name]
+        if not tasks_to_run:
+            logger.error("No task named %r found in config — aborting", task_name)
+            return
+
     run_log_path: Path | None = None
     with LogDB(cfg.DB_PATH) as log_db:
         lst_task_status = []
-        for task_config in backup["tasks"]:
+        for task_config in tasks_to_run:
             task_work_dir = Path(backup["dir_backup_local"].rstrip("/")) / task_config["name"]
             task_work_dir.mkdir(parents=True, exist_ok=True)
             task = BackupTask(
@@ -133,5 +146,6 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file_config", help="Path to the configuration file")
+    parser.add_argument("--task", default=None, help="Run only the named task")
     args = parser.parse_args()
-    main(file_config=args.file_config)
+    main(file_config=args.file_config, task_name=args.task)

@@ -40,7 +40,6 @@ Example usage::
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 
@@ -105,21 +104,29 @@ def _check_ssh_key(app) -> bool:
 
 
 def _check_schedule(app) -> bool:
-    """Return True if a schedule has been saved and enabled on disk.
+    """Return True if at least one task has an enabled schedule in backup_config.yml.
+
+    This checks both the global schedule and any per-task overrides.
 
     Args:
         app: The Flask application instance.
 
     Returns:
-        bool: ``True`` when ``schedule.json`` exists and its ``enabled`` field
-        is truthy.
+        bool: ``True`` when at least one task will run automatically.
     """
-    schedule_path = Path(app.config["DATA_ROOT"]) / "schedule.json"
-    if not schedule_path.exists():
+    config_path = Path(app.config["CONFIG_PATH"])
+    if not config_path.exists():
         return False
     try:
-        cfg = json.loads(schedule_path.read_text(encoding="utf-8"))
-        return bool(cfg.get("enabled"))
+        parsed = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        global_sched = parsed.get("schedule") or {}
+        global_enabled = bool(global_sched.get("enabled")) and bool(global_sched.get("cron"))
+        tasks = parsed.get("tasks", []) if isinstance(parsed, dict) else []
+        for task in tasks:
+            task_sched = task.get("schedule") or {}
+            if task_sched.get("enabled") and task_sched.get("cron"):
+                return True
+        return global_enabled and bool(tasks)
     except Exception:
         return False
 

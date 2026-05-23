@@ -89,10 +89,13 @@ class ConfigFile:
 
         This ensures required fields are present for every task and logs
         helpful information or warnings when optional fields are missing.
+        Per-task ``schedule`` sections are validated and normalised the same
+        way as the top-level schedule.
 
         Raises:
             KeyError: If any task is missing mandatory keys such as ``name`` or ``dir_source``.
         """
+        global_schedule = self.backup_config.get("schedule")
         for task in self.backup_config["tasks"]:
             logger.info(f"Found task '{task['name']}'")
             self._assert_keys(
@@ -102,3 +105,16 @@ class ConfigFile:
             )
             if "excludes" not in task:
                 logger.warning(f"No excludes defined for task '{task['name']}'")
+            # Normalise per-task schedule: absent → inherit global; present → validate
+            if "schedule" not in task:
+                task["_effective_schedule"] = global_schedule
+            elif isinstance(task["schedule"], dict) and task["schedule"].get("cron"):
+                sched = task["schedule"]
+                sched.setdefault("enabled", True)
+                task["_effective_schedule"] = sched
+            else:
+                logger.warning(
+                    f"Task '{task['name']}' has an invalid schedule section — "
+                    "falling back to global schedule"
+                )
+                task["_effective_schedule"] = global_schedule
