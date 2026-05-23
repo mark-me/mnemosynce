@@ -1,6 +1,5 @@
 """Schedule management routes."""
 
-import json
 import logging
 import smtplib
 import socket
@@ -21,10 +20,10 @@ from flask import (
 from web.auth import login_required
 from web.setup_guard import setup_complete_required
 from web.scheduler import (
-    _schedule_path,
     get_job_status,
     get_scheduler,
     load_schedule,
+    load_task_schedule,
     remove_schedule,
     save_schedule,
 )
@@ -63,7 +62,11 @@ def index():
         Rendered ``web/schedule.html`` template.
     """
     app = current_app._get_current_object()
-    return render_template("web/schedule.html", cfg=load_schedule(app), status=get_job_status(app))
+    return render_template(
+        "web/schedule.html",
+        global_cfg=load_schedule(app),
+        status=get_job_status(app),
+    )
 
 
 @bp.route("/save", methods=["POST"])
@@ -72,21 +75,19 @@ def save():
     app = current_app._get_current_object()
     cron = request.form.get("cron", "").strip()
     enabled = request.form.get("enabled") == "on"
+    task_name = request.form.get("task_name") or None  # None = global schedule
     error = _validate_cron(cron)
     if error:
         flash(error, "danger")
         return redirect(url_for("schedule.index"))
     cfg = {"cron": cron, "enabled": enabled}
     try:
+        save_schedule(app, cfg, task_name=task_name)
+        scope = f"task '{task_name}'" if task_name else "global schedule"
         if enabled:
-            save_schedule(app, cfg)
-            flash(f"Schedule saved and active: {cron}", "success")
+            flash(f"Schedule saved and active for {scope}: {cron}", "success")
         else:
-            _schedule_path(app).write_text(json.dumps(cfg, indent=2), encoding="utf-8")
-            sched = get_scheduler()
-            if sched.get_job("backup_run"):
-                sched.remove_job("backup_run")
-            flash("Schedule saved but disabled.", "info")
+            flash(f"Schedule saved but disabled for {scope}.", "info")
     except Exception as exc:
         flash(f"Could not save schedule: {exc}", "danger")
     next_url = request.args.get("next") or url_for("schedule.index")
@@ -96,8 +97,10 @@ def save():
 @bp.route("/remove", methods=["POST"])
 @login_required
 def remove():
-    remove_schedule(current_app._get_current_object())
-    flash("Schedule removed.", "info")
+    task_name = request.form.get("task_name") or None
+    remove_schedule(current_app._get_current_object(), task_name=task_name)
+    scope = f"task '{task_name}'" if task_name else "global schedule"
+    flash(f"Schedule removed for {scope}.", "info")
     next_url = request.args.get("next") or url_for("schedule.index")
     return redirect(next_url)
 

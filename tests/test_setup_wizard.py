@@ -18,7 +18,6 @@ calls are made.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -104,17 +103,28 @@ def _write_ssh_key(app, name: str = "test_key") -> None:
 
 
 def _write_schedule(app, enabled: bool = True) -> None:
-    """Write a schedule.json file to DATA_ROOT.
+    """Write a schedule into backup_config.yml (or create a minimal config with one).
+
+    If CONFIG_PATH already exists the schedule key is merged in; otherwise a
+    minimal valid config is written first so the file always passes validation.
 
     Args:
-        app: The Flask application instance (provides DATA_ROOT).
+        app: The Flask application instance (provides CONFIG_PATH).
         enabled (bool): Whether the schedule is active.
     """
-    schedule_path = Path(app.config["DATA_ROOT"]) / "schedule.json"
-    schedule_path.write_text(
-        json.dumps({"cron": "0 2 * * *", "enabled": enabled}),
-        encoding="utf-8",
-    )
+    config_path = Path(app.config["CONFIG_PATH"])
+    if config_path.exists():
+        cfg = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    else:
+        cfg = {
+            "dir_backup_local": "/mnt/local",
+            "dir_backup_remote": "user@host:/mnt/remote",
+            "email_sender": "a@gmail.com",
+            "email_report": "b@example.com",
+            "tasks": [{"name": "T", "dir_source": "/data"}],
+        }
+    cfg["schedule"] = {"cron": "0 2 * * *", "enabled": enabled}
+    config_path.write_text(yaml.dump(cfg), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
