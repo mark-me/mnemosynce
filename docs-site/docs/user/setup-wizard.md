@@ -63,7 +63,7 @@ Once you have trusted the host keys, run at least one successful SSH or email te
 
 ### Step 4 — Schedule
 
-Set a cron expression to run backups automatically. Use the quick-preset buttons or type your own expression.
+Set a cron expression to run backups automatically. This sets the **global default schedule** that applies to all tasks. Use the quick-preset buttons or type your own expression. Per-task schedule overrides can be configured from the full Schedule page after setup is complete.
 
 | Preset | Expression | Runs |
 |--------|-----------|------|
